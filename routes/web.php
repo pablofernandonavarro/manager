@@ -12,6 +12,7 @@ use App\Livewire\Configuration\ProductSettings;
 use App\Livewire\Configuration\Subgrupos;
 use App\Livewire\Configuration\Targets;
 use App\Livewire\Configuration\Temporadas;
+use App\Livewire\ListasPrecios\Buscador as ListasPreciosBuscador;
 use App\Livewire\ListasPrecios\Edit as ListasPreciosEdit;
 use App\Livewire\ListasPrecios\Index as ListasPreciosIndex;
 use App\Livewire\Permissions\Index as PermissionsIndex;
@@ -25,6 +26,8 @@ use App\Livewire\Roles\Edit as RolesEdit;
 use App\Livewire\Roles\Index as RolesIndex;
 use App\Livewire\Sucursales\Edit as SucursalesEdit;
 use App\Livewire\Sucursales\Index as SucursalesIndex;
+use App\Livewire\Sucursales\ListasPrecios as SucursalesListasPrecios;
+use App\Livewire\Sucursales\Stock as SucursalesStock;
 use App\Livewire\Users\Create;
 use App\Livewire\Users\Edit;
 use App\Livewire\Users\Index;
@@ -92,9 +95,12 @@ Route::middleware('auth')->group(function () {
     // Listas de precios
     Route::get('/listas-precios', ListasPreciosIndex::class)->name('listas-precios.index');
     Route::get('/listas-precios/{id}/editar', ListasPreciosEdit::class)->name('listas-precios.edit');
+    Route::get('/listas-precios/{id}/productos', ListasPreciosBuscador::class)->name('listas-precios.show');
 
     // Sucursales
     Route::get('/sucursales', SucursalesIndex::class)->name('sucursales.index');
+    Route::get('/sucursales/listas-precios', SucursalesListasPrecios::class)->name('sucursales.listas-precios');
+    Route::get('/sucursales/stock', SucursalesStock::class)->name('sucursales.stock');
     Route::get('/sucursales/{id}/editar', SucursalesEdit::class)->name('sucursales.edit');
 
     // Puntos de venta

@@ -172,10 +172,16 @@ class SyncController extends Controller
                     'sincronizado_at' => $sincronizadoAt,
                 ]);
 
-                StockSucursal::updateOrCreate(
-                    ['sucursal_id' => $pdv->sucursal_id, 'product_id' => $mov['product_id']],
-                    ['cantidad' => DB::raw('GREATEST(0, cantidad + '.((int) $mov['cantidad']).')')],
-                );
+                $stockSucursal = StockSucursal::firstOrNew([
+                    'sucursal_id' => $pdv->sucursal_id,
+                    'product_id' => $mov['product_id']
+                ]);
+
+                $cantidadActual = $stockSucursal->cantidad ?? 0;
+                $nuevaCantidad = max(0, $cantidadActual + (int) $mov['cantidad']);
+
+                $stockSucursal->cantidad = $nuevaCantidad;
+                $stockSucursal->save();
 
                 $totalStock = StockSucursal::where('product_id', $mov['product_id'])->sum('cantidad');
                 Product::where('id', $mov['product_id'])->update(['stock' => $totalStock]);

@@ -9,27 +9,37 @@
 
     <!-- Formulario nueva sucursal -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-base font-semibold text-gray-900 mb-4">Nueva sucursal</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="flex items-start justify-between gap-4 mb-4">
             <div>
+                <h3 class="text-base font-semibold text-gray-900">Nueva sucursal</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Agregá una nueva sucursal al sistema</p>
+            </div>
+            <button type="button" wire:click="save"
+                    class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Nueva Sucursal
+            </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
                 <input type="text"
                        wire:model="nombre"
                        wire:keydown.enter.prevent="save"
-                       placeholder="Nombre de la sucursal..."
+                       placeholder="Ej: Sucursal Centro"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('nombre') border-red-300 @enderror">
                 @error('nombre')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                 @enderror
             </div>
-            <div class="flex gap-2">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
                 <input type="text"
                        wire:model="direccion"
-                       placeholder="Dirección (opcional)..."
-                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <button type="button" wire:click="save"
-                        class="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">
-                    + Agregar
-                </button>
+                       placeholder="Ej: Av. Principal 1234"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             </div>
         </div>
     </div>
@@ -86,11 +96,13 @@
                                 @endforeach
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-center">
-                            <button type="button" wire:click="toggleActive({{ $sucursal->id }})"
-                                    class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none {{ $sucursal->activo ? 'bg-blue-600' : 'bg-gray-200' }}">
-                                <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform {{ $sucursal->activo ? 'translate-x-4.5' : 'translate-x-0.5' }}"></span>
-                            </button>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-center">
+                                <button type="button" wire:click="toggleActive({{ $sucursal->id }})"
+                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {{ $sucursal->activo ? 'bg-blue-600' : 'bg-gray-300' }}">
+                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform {{ $sucursal->activo ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                                </button>
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-right">
                             @if($editingId === $sucursal->id)
