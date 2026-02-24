@@ -25,6 +25,7 @@ class ProductConfiguration extends Model
         'require_images',
         'min_images',
         'max_images',
+        'child_inherits_parent_images',
         'allow_negative_stock',
         'track_stock',
         'default_stock_critical',
@@ -55,6 +56,7 @@ class ProductConfiguration extends Model
             'require_unique_code' => 'boolean',
             'require_unique_barcode' => 'boolean',
             'require_images' => 'boolean',
+            'child_inherits_parent_images' => 'boolean',
             'allow_negative_stock' => 'boolean',
             'track_stock' => 'boolean',
             'require_cost' => 'boolean',
@@ -89,7 +91,7 @@ class ProductConfiguration extends Model
      */
     public function generateNextCode(): string
     {
-        if (!$this->auto_generate_code) {
+        if (! $this->auto_generate_code) {
             return '';
         }
 
@@ -97,7 +99,7 @@ class ProductConfiguration extends Model
 
         // Agregar prefijo
         if ($this->code_prefix) {
-            $code .= $this->code_prefix . $this->code_separator;
+            $code .= $this->code_prefix.$this->code_separator;
         }
 
         // Generar el número según el formato
@@ -122,7 +124,7 @@ class ProductConfiguration extends Model
 
         // Agregar sufijo
         if ($this->code_suffix) {
-            $code .= $this->code_separator . $this->code_suffix;
+            $code .= $this->code_separator.$this->code_suffix;
         }
 
         return $code;
@@ -143,7 +145,7 @@ class ProductConfiguration extends Model
      */
     public function generateSKU(array $productData): string
     {
-        if (!$this->auto_generate_sku || !$this->sku_format) {
+        if (! $this->auto_generate_sku || ! $this->sku_format) {
             return '';
         }
 
@@ -174,7 +176,7 @@ class ProductConfiguration extends Model
      */
     public function calculatePrice(?float $cost): ?float
     {
-        if (!$this->auto_calculate_price || !$cost) {
+        if (! $this->auto_calculate_price || ! $cost) {
             return null;
         }
 

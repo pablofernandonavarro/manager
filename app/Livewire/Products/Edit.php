@@ -3,8 +3,17 @@
 namespace App\Livewire\Products;
 
 use App\Enums\ProductType;
+use App\Models\AttributeType;
+use App\Models\Grupo;
+use App\Models\Linea;
+use App\Models\Marca;
+use App\Models\Procedencia;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Subgrupo;
+use App\Models\Target;
+use App\Models\Temporada;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Rule;
 use Livewire\Component;
@@ -18,26 +27,18 @@ class Edit extends Component
 
     // Gallery images (Magento style)
     public $newImages = [];
+
     public array $imageRoles = [];
+
     public array $imageLabels = [];
 
     // Variants generation (Magento style)
-    public array $selectedColors = [];
-    public array $selectedSizes = [];
+    public Collection $variantAttributes;
+
+    /** @var array<string, list<string>> */
+    public array $selectedAttributeValues = [];
+
     public array $variants = [];
-
-    public array $availableColors = [
-        'Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Gris', 'Rosa', 'Amarillo', 'Naranja', 'Violeta'
-    ];
-
-    public array $availableSizes = [
-        ['id' => 1, 'name' => 'XS'],
-        ['id' => 2, 'name' => 'S'],
-        ['id' => 3, 'name' => 'M'],
-        ['id' => 4, 'name' => 'L'],
-        ['id' => 5, 'name' => 'XL'],
-        ['id' => 6, 'name' => 'XXL'],
-    ];
 
     // Tipo de producto (NUEVO)
     #[Rule('required|in:simple,configurable')]
@@ -195,6 +196,9 @@ class Edit extends Component
 
     #[Rule('nullable|string|max:100')]
     public string $composicion = '';
+
+    #[Rule('nullable|string|max:50')]
+    public string $genero = '';
 
     #[Rule('nullable|string|max:100')]
     public string $mix = '';
@@ -393,41 +397,74 @@ class Edit extends Component
 
     // Estados y flags booleanos
     public int $estado = 1;
+
     public bool $exportar = false;
+
     public bool $comision_especial = false;
+
     public bool $compuesto = false;
+
     public bool $remitible = true;
+
     public int $garantia = 0;
+
     public bool $es_vendible = false;
+
     public bool $publicar_ml = false;
+
     public bool $es_materia_prima = false;
+
     public bool $procesado = false;
+
     public bool $nube_actualizar = false;
+
     public bool $precio_variable = false;
+
     public bool $no_aplica_descuento = false;
+
     public bool $destacado_web = false;
+
     public int $estado_web = 0;
+
     public int $estado_dafiti = 0;
+
     public int $magento_subido = 0;
+
     public int $magento_actualizado = 0;
+
     public int $dafiti_actualizar = 1;
+
     public int $remitible_auto = 0;
 
     // Flags de producción
     public int $molde = 1;
+
     public int $progresion = 1;
+
     public int $ficha_tecnica = 1;
+
     public int $estampa = 1;
+
     public int $bordado = 1;
+
     public int $tachas = 1;
+
     public int $etiquetas = 1;
+
     public int $avios = 1;
+
     public int $lavado = 1;
+
     public int $muestra = 1;
+
     public int $muestrario = 1;
+
     public int $encorte = 1;
+
     public int $ploter_ok = 0;
+
     public int $medicion_ok = 0;
+
     public int $orden = 0;
 
     // Fechas
@@ -454,7 +491,8 @@ class Edit extends Component
 
     public function mount(int $productId): void
     {
-        $this->product = Product::with(['images', 'variants'])->findOrFail($productId);
+        $this->variantAttributes = AttributeType::forVariants();
+        $this->product = Product::with(['images', 'variants', 'parent.images'])->findOrFail($productId);
 
         // Cargar todos los datos del producto
         $this->product_type = $this->product->product_type->value;
@@ -500,6 +538,7 @@ class Edit extends Component
         $this->color = $this->product->color ?? '';
         $this->color_ml = $this->product->color_ml ?? '';
         $this->composicion = $this->product->composicion ?? '';
+        $this->genero = $this->product->genero ?? '';
         $this->mix = $this->product->mix ?? '';
         $this->n_talle = $this->product->n_talle ?? '';
         $this->n_color = $this->product->n_color ?? '';
@@ -625,7 +664,7 @@ class Edit extends Component
         ]);
 
         $position = $this->product->images()->max('position') ?? 0;
-        $isFirstImage = $this->product->images()->count() === 0;
+        $setAsBase = ! $this->product->images()->where('is_base', true)->exists();
 
         foreach ($this->newImages as $file) {
             $position++;
@@ -635,8 +674,10 @@ class Edit extends Component
                 'product_id' => $this->product->id,
                 'path' => $path,
                 'position' => $position,
-                'is_base' => $isFirstImage && $position === 1, // First image is base
+                'is_base' => $setAsBase,
             ]);
+
+            $setAsBase = false;
         }
 
         $this->reset('newImages');
@@ -659,7 +700,23 @@ class Edit extends Component
             return;
         }
 
+        $wasBase = $image->is_base;
         $image->delete();
+
+        $hasBase = ProductImage::where('product_id', $this->product->id)
+            ->where('is_base', true)
+            ->exists();
+
+        if ($wasBase || ! $hasBase) {
+            $next = ProductImage::where('product_id', $this->product->id)
+                ->orderBy('position')
+                ->first();
+
+            if ($next) {
+                $next->update(['is_base' => true]);
+            }
+        }
+
         $this->product->load('images');
     }
 
@@ -706,21 +763,27 @@ class Edit extends Component
 
         $this->variants = [];
 
-        foreach ($this->selectedColors as $color) {
-            foreach ($this->selectedSizes as $sizeId) {
-                $size = collect($this->availableSizes)->firstWhere('id', $sizeId);
-
-                $this->variants[] = [
-                    'color' => $color,
-                    'size_id' => $sizeId,
-                    'size_name' => $size['name'],
-                    'stock' => 0,
-                    'enabled' => true,
-                ];
+        $combinations = [[]];
+        foreach ($this->variantAttributes as $type) {
+            $selected = $this->selectedAttributeValues[$type->slug] ?? [];
+            if (empty($selected)) {
+                continue;
             }
+
+            $newCombinations = [];
+            foreach ($combinations as $existing) {
+                foreach ($selected as $val) {
+                    $newCombinations[] = array_merge($existing, [[
+                        'slug' => $type->slug,
+                        'product_column' => $type->product_column,
+                        'value' => $val,
+                    ]]);
+                }
+            }
+            $combinations = $newCombinations;
         }
 
-        \Log::info('Variants generated', ['count' => count($this->variants), 'variants' => $this->variants]);
+        $this->variants = array_map(fn ($combo) => ['attributes' => $combo, 'stock' => 0], $combinations);
     }
 
     public function saveVariants(): void
@@ -729,6 +792,7 @@ class Edit extends Component
 
         if (empty($this->variants)) {
             session()->flash('error', 'No hay variantes para guardar.');
+
             return;
         }
 
@@ -761,18 +825,18 @@ class Edit extends Component
             $service->createVariantsForExisting($this->product, $configurableData, $this->variants);
 
             // Limpiar el formulario
-            $this->reset(['variants', 'selectedColors', 'selectedSizes']);
+            $this->reset(['variants', 'selectedAttributeValues']);
 
             // Recargar el producto con sus variantes
             $this->product->refresh();
             $this->product->load('variants');
 
-            session()->flash('success', 'Variantes creadas exitosamente: ' . $this->product->variants->count() . ' variantes.');
+            session()->flash('success', 'Variantes creadas exitosamente: '.$this->product->variants->count().' variantes.');
 
             // Dispatch para actualizar la UI
             $this->dispatch('variants-saved');
         } catch (\Exception $e) {
-            session()->flash('error', 'Error al crear variantes: ' . $e->getMessage());
+            session()->flash('error', 'Error al crear variantes: '.$e->getMessage());
         }
     }
 
@@ -784,7 +848,6 @@ class Edit extends Component
         $updateData = [
             'product_type' => ProductType::from($this->product_type),
             'nombre' => $this->nombre,
-            'busqueda' => $this->busqueda ?: strtolower($this->nombre . ' ' . $this->codigo_interno . ' ' . $this->codigo_barras),
             'codigo_interno' => $this->codigo_interno,
             'codigo_barras' => $this->codigo_barras,
             'precio' => $this->precio,
@@ -909,6 +972,7 @@ class Edit extends Component
             'mix' => $this->mix,
             'fecha_ingreso' => $this->fecha_ingreso,
             'composicion' => $this->composicion,
+            'genero' => $this->genero,
             'complejidad' => $this->complejidad,
             'etapa' => $this->etapa,
             'nivel_precio' => $this->nivel_precio,
@@ -968,11 +1032,18 @@ class Edit extends Component
     #[Layout('layouts.app')]
     public function render(): mixed
     {
-        // Reload variants to ensure fresh data
-        $this->product->load('variants');
+        // Reload variants and parent images to ensure fresh data
+        $this->product->load(['variants', 'parent.images']);
 
         return view('livewire.products.edit', [
             'existingVariants' => $this->product->variants,
+            'marcas' => Marca::where('activo', true)->orderBy('nombre')->get(),
+            'lineas' => Linea::where('activo', true)->orderBy('nombre')->get(),
+            'temporadas' => Temporada::where('activo', true)->orderByDesc('anio')->orderBy('nombre')->get(),
+            'grupos' => Grupo::where('activo', true)->orderBy('nombre')->get(),
+            'subgrupos' => Subgrupo::where('activo', true)->orderBy('nombre')->get(),
+            'targets' => Target::where('activo', true)->orderBy('nombre')->get(),
+            'procedencias' => Procedencia::where('activo', true)->orderBy('nombre')->get(),
         ]);
     }
 }

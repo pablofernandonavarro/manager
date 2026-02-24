@@ -93,7 +93,25 @@
                     @forelse($products as $product)
                         <tr class="hover:bg-gray-50 transition-colors duration-150 {{ $product->trashed() ? 'bg-red-50/50' : '' }}">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900 font-mono">{{ $product->codigo_interno ?? '-' }}</div>
+                                @if($product->codigo_interno)
+                                    <div x-data="{ copied: false }"
+                                         @click="const el = document.createElement('textarea'); el.value = '{{ $product->codigo_interno }}'; el.style.position = 'fixed'; el.style.opacity = '0'; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); copied = true; setTimeout(() => copied = false, 1500)"
+                                         class="inline-flex items-center gap-1 cursor-pointer group"
+                                         title="Copiar código">
+                                        <span class="text-sm font-mono transition-colors"
+                                              :class="copied ? 'text-green-600' : 'text-gray-900 group-hover:text-blue-600'">
+                                            {{ $product->codigo_interno }}
+                                        </span>
+                                        <svg x-show="!copied" class="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                        </svg>
+                                        <svg x-show="copied" class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </div>
+                                @else
+                                    <div class="text-sm text-gray-900 font-mono">-</div>
+                                @endif
                                 @if($product->codigo_barras)
                                     <div class="text-xs text-gray-500 font-mono">{{ $product->codigo_barras }}</div>
                                 @endif
@@ -101,8 +119,14 @@
                             <td class="px-6 py-4 align-middle">
                                 <div class="flex items-center gap-3">
                                     <div class="flex-shrink-0 h-16 w-16 border border-gray-300 bg-white p-0.5">
-                                        @if($product->imagen)
-                                            <img src="{{ asset('storage/' . $product->imagen) }}"
+                                        @php
+                                            $effectiveImage = $product->effectiveBaseImage();
+                                            $thumbSrc = $product->imagen
+                                                ? asset('storage/' . $product->imagen)
+                                                : ($effectiveImage ? asset('storage/' . $effectiveImage->path) : null);
+                                        @endphp
+                                        @if($thumbSrc)
+                                            <img src="{{ $thumbSrc }}"
                                                  alt="{{ $product->nombre }}"
                                                  class="h-full w-full object-contain max-h-16">
                                         @else
@@ -140,8 +164,8 @@
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 ring-1 ring-blue-600/20">
                                         📦 Config
                                     </span>
-                                    @if($product->variants->count() > 0)
-                                        <div class="text-xs text-gray-500 mt-1">{{ $product->variants->count() }} vars</div>
+                                    @if($product->variants_count > 0)
+                                        <div class="text-xs text-gray-500 mt-1">{{ $product->variants_count }} vars</div>
                                     @endif
                                 @endif
                             </td>

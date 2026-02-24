@@ -12,37 +12,59 @@ class ProductSettings extends Component
 
     // Configuración de códigos internos
     public bool $auto_generate_code = false;
+
     public string $code_format = 'sequential';
+
     public ?string $code_prefix = null;
+
     public ?string $code_suffix = null;
+
     public int $code_length = 6;
+
     public string $code_separator = '-';
+
     public int $code_next_number = 1;
 
     // Configuración de SKU
     public bool $auto_generate_sku = false;
+
     public ?string $sku_format = null;
+
     public bool $sku_uppercase = true;
 
     // Configuración de códigos de barras
     public bool $auto_generate_barcode = false;
+
     public string $barcode_format = 'ean13';
+
     public ?string $barcode_prefix = null;
 
     // Validaciones
     public bool $require_unique_code = true;
+
     public bool $require_unique_barcode = true;
+
     public bool $require_images = false;
+
     public int $min_images = 1;
+
     public int $max_images = 10;
+
+    public bool $childInheritsParentImages = true;
 
     // Stock y precios
     public bool $allow_negative_stock = false;
+
     public bool $track_stock = true;
+
     public float $default_stock_critical = 10;
+
     public bool $require_cost = false;
+
     public bool $require_price = true;
+
     public bool $auto_calculate_price = false;
+
     public float $default_markup = 50;
 
     // Impuestos
@@ -50,15 +72,22 @@ class ProductSettings extends Component
 
     // Valores por defecto
     public ?string $default_marca = null;
+
     public ?string $default_linea = null;
+
     public ?string $default_familia = null;
+
     public ?string $default_temporada = null;
+
     public bool $default_estado = true;
+
     public bool $default_es_vendible = true;
+
     public bool $default_remitible = true;
 
     // Variantes
     public bool $require_variants_for_configurable = true;
+
     public int $min_variants = 1;
 
     public function mount(): void
@@ -87,6 +116,7 @@ class ProductSettings extends Component
         $this->require_images = $this->config->require_images;
         $this->min_images = $this->config->min_images;
         $this->max_images = $this->config->max_images;
+        $this->childInheritsParentImages = $this->config->child_inherits_parent_images;
 
         $this->allow_negative_stock = $this->config->allow_negative_stock;
         $this->track_stock = $this->config->track_stock;
@@ -134,6 +164,7 @@ class ProductSettings extends Component
             'require_images' => $this->require_images,
             'min_images' => $this->min_images,
             'max_images' => $this->max_images,
+            'child_inherits_parent_images' => $this->childInheritsParentImages,
 
             'allow_negative_stock' => $this->allow_negative_stock,
             'track_stock' => $this->track_stock,
@@ -165,7 +196,7 @@ class ProductSettings extends Component
         $preview = '';
 
         if ($this->code_prefix) {
-            $preview .= $this->code_prefix . $this->code_separator;
+            $preview .= $this->code_prefix.$this->code_separator;
         }
 
         switch ($this->code_format) {
@@ -181,7 +212,7 @@ class ProductSettings extends Component
         }
 
         if ($this->code_suffix) {
-            $preview .= $this->code_separator . $this->code_suffix;
+            $preview .= $this->code_separator.$this->code_suffix;
         }
 
         return $preview ?: 'N/A';

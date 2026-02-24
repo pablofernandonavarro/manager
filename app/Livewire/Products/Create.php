@@ -3,8 +3,17 @@
 namespace App\Livewire\Products;
 
 use App\Enums\ProductType;
+use App\Models\AttributeType;
+use App\Models\Grupo;
+use App\Models\Linea;
+use App\Models\Marca;
+use App\Models\Procedencia;
 use App\Models\Product;
+use App\Models\Subgrupo;
+use App\Models\Target;
+use App\Models\Temporada;
 use App\Services\ProductCodeService;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Rule;
 use Livewire\Component;
@@ -13,13 +22,17 @@ use Livewire\WithFileUploads;
 class Create extends Component
 {
     use WithFileUploads;
+
     // Tipo de producto (NUEVO)
     #[Rule('required|in:simple,configurable')]
     public string $product_type = 'simple';
 
     // Variantes (para productos configurables)
-    public array $selectedColors = [];
-    public array $selectedSizes = [];
+    public Collection $variantAttributes;
+
+    /** @var array<string, list<string>> */
+    public array $selectedAttributeValues = [];
+
     public array $variants = [];
 
     // Información básica
@@ -174,6 +187,9 @@ class Create extends Component
 
     #[Rule('nullable|string|max:100')]
     public string $composicion = '';
+
+    #[Rule('nullable|string|max:50')]
+    public string $genero = '';
 
     #[Rule('nullable|string|max:100')]
     public string $mix = '';
@@ -372,41 +388,74 @@ class Create extends Component
 
     // Estados y flags booleanos
     public int $estado = 1;
+
     public bool $exportar = false;
+
     public bool $comision_especial = false;
+
     public bool $compuesto = false;
+
     public bool $remitible = true;
+
     public int $garantia = 0;
+
     public bool $es_vendible = false;
+
     public bool $publicar_ml = false;
+
     public bool $es_materia_prima = false;
+
     public bool $procesado = false;
+
     public bool $nube_actualizar = false;
+
     public bool $precio_variable = false;
+
     public bool $no_aplica_descuento = false;
+
     public bool $destacado_web = false;
+
     public int $estado_web = 0;
+
     public int $estado_dafiti = 0;
+
     public int $magento_subido = 0;
+
     public int $magento_actualizado = 0;
+
     public int $dafiti_actualizar = 1;
+
     public int $remitible_auto = 0;
 
     // Flags de producción
     public int $molde = 1;
+
     public int $progresion = 1;
+
     public int $ficha_tecnica = 1;
+
     public int $estampa = 1;
+
     public int $bordado = 1;
+
     public int $tachas = 1;
+
     public int $etiquetas = 1;
+
     public int $avios = 1;
+
     public int $lavado = 1;
+
     public int $muestra = 1;
+
     public int $muestrario = 1;
+
     public int $encorte = 1;
+
     public int $ploter_ok = 0;
+
     public int $medicion_ok = 0;
+
     public int $orden = 0;
 
     // Fechas
@@ -431,25 +480,12 @@ class Create extends Component
     #[Rule('nullable|date')]
     public ?string $medicion_hasta = null;
 
-    // Colores y talles disponibles
-    public array $availableColors = [
-        'Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Gris', 'Rosa', 'Amarillo', 'Naranja', 'Violeta'
-    ];
-
-    public array $availableSizes = [
-        ['id' => 1, 'name' => 'XS'],
-        ['id' => 2, 'name' => 'S'],
-        ['id' => 3, 'name' => 'M'],
-        ['id' => 4, 'name' => 'L'],
-        ['id' => 5, 'name' => 'XL'],
-        ['id' => 6, 'name' => 'XXL'],
-    ];
-
     /**
      * Inicializa el componente con valores por defecto de la configuración.
      */
     public function mount(): void
     {
+        $this->variantAttributes = AttributeType::forVariants();
         try {
             $codeService = app(ProductCodeService::class);
             $config = $codeService->getConfig();
@@ -493,7 +529,7 @@ class Create extends Component
     }
 
     /**
-     * Genera variantes automáticamente cuando cambian colores o talles (estilo Magento).
+     * Genera variantes como producto cartesiano de los atributos seleccionados.
      */
     public function generateVariants(): void
     {
@@ -503,19 +539,27 @@ class Create extends Component
 
         $this->variants = [];
 
-        foreach ($this->selectedColors as $color) {
-            foreach ($this->selectedSizes as $sizeId) {
-                $size = collect($this->availableSizes)->firstWhere('id', $sizeId);
-
-                $this->variants[] = [
-                    'color' => $color,
-                    'size_id' => $sizeId,
-                    'size_name' => $size['name'],
-                    'stock' => 0,
-                    'enabled' => true,
-                ];
+        $combinations = [[]];
+        foreach ($this->variantAttributes as $type) {
+            $selected = $this->selectedAttributeValues[$type->slug] ?? [];
+            if (empty($selected)) {
+                continue;
             }
+
+            $newCombinations = [];
+            foreach ($combinations as $existing) {
+                foreach ($selected as $val) {
+                    $newCombinations[] = array_merge($existing, [[
+                        'slug' => $type->slug,
+                        'product_column' => $type->product_column,
+                        'value' => $val,
+                    ]]);
+                }
+            }
+            $combinations = $newCombinations;
         }
+
+        $this->variants = array_map(fn ($combo) => ['attributes' => $combo, 'stock' => 0], $combinations);
     }
 
     /**
@@ -535,6 +579,7 @@ class Create extends Component
         // Si es configurable con variantes, usar el servicio estilo Magento
         if ($this->product_type === 'configurable' && count($this->variants) > 0) {
             $this->saveConfigurableWithVariants();
+
             return;
         }
 
@@ -553,7 +598,7 @@ class Create extends Component
             $codeService = app(ProductCodeService::class);
             $config = $codeService->getConfig();
 
-            if ($config->auto_calculate_price && $this->costo > 0 && (!$this->precio || $this->precio == 0)) {
+            if ($config->auto_calculate_price && $this->costo > 0 && (! $this->precio || $this->precio == 0)) {
                 $this->precio = $config->calculatePrice($this->costo);
             }
         } catch (\Exception $e) {
@@ -564,7 +609,6 @@ class Create extends Component
         Product::create([
             'product_type' => ProductType::from($this->product_type),
             'nombre' => $this->nombre,
-            'busqueda' => $this->busqueda ?: strtolower($this->nombre . ' ' . $this->codigo_interno . ' ' . $this->codigo_barras),
             'codigo_interno' => $this->codigo_interno,
             'codigo_barras' => $this->codigo_barras,
             'precio' => $this->precio,
@@ -693,6 +737,7 @@ class Create extends Component
             'mix' => $this->mix,
             'fecha_ingreso' => $this->fecha_ingreso,
             'composicion' => $this->composicion,
+            'genero' => $this->genero,
             'foto_modelo' => $fotoModeloPath,
             'foto_modelo_detalle' => $fotoModeloDetallePath,
             'foto_medidas' => $fotoMedidasPath,
@@ -757,28 +802,24 @@ class Create extends Component
             'publicar_ml' => $this->publicar_ml,
         ];
 
-        // Preparar variantes
-        $variantsData = array_map(function ($variant) {
-            return [
-                'color' => $variant['color'],
-                'talle_id' => $variant['size_id'],
-                'talle_nombre' => $variant['size_name'],
-                'stock' => $variant['stock'] ?? 0,
-                'primera' => 0,
-                'segunda' => 0,
-            ];
-        }, $this->variants);
-
         // Crear usando el servicio
-        $service->createConfigurableWithVariants($configurableData, $variantsData);
+        $service->createConfigurableWithVariants($configurableData, $this->variants);
 
-        session()->flash('success', "Producto configurable creado con " . count($this->variants) . " variantes.");
+        session()->flash('success', 'Producto configurable creado con '.count($this->variants).' variantes.');
         $this->redirect('/productos', navigate: true);
     }
 
     #[Layout('layouts.app')]
     public function render(): mixed
     {
-        return view('livewire.products.create');
+        return view('livewire.products.create', [
+            'marcas' => Marca::where('activo', true)->orderBy('nombre')->get(),
+            'lineas' => Linea::where('activo', true)->orderBy('nombre')->get(),
+            'temporadas' => Temporada::where('activo', true)->orderByDesc('anio')->orderBy('nombre')->get(),
+            'grupos' => Grupo::where('activo', true)->orderBy('nombre')->get(),
+            'subgrupos' => Subgrupo::where('activo', true)->orderBy('nombre')->get(),
+            'targets' => Target::where('activo', true)->orderBy('nombre')->get(),
+            'procedencias' => Procedencia::where('activo', true)->orderBy('nombre')->get(),
+        ]);
     }
 }

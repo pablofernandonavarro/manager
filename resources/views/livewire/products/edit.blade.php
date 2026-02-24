@@ -122,6 +122,22 @@
                         <input type="text" wire:model="n_talle" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
                     <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Género</label>
+                        <select wire:model="genero" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">— Sin especificar —</option>
+                            <option value="Femenino">Femenino</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Unisex">Unisex</option>
+                            <option value="Niña">Niña</option>
+                            <option value="Niño">Niño</option>
+                            <option value="Bebé">Bebé</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Composición / Material</label>
+                        <input type="text" wire:model="composicion" placeholder="Ej: 100% Algodón, 50% Poliéster..." class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    </div>
+                    <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Peso (kg)</label>
                         <input type="number" step="0.001" wire:model="peso" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
@@ -312,42 +328,38 @@
                 <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
                     <h4 class="text-md font-bold text-gray-900 mb-4">➕ Agregar Nuevas Variantes</h4>
 
-                    <!-- Paso 1: Seleccionar Colores -->
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">1️⃣ Seleccionar Colores</label>
-                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                            @foreach($availableColors as $color)
-                            <label class="flex items-center space-x-2 p-2 border rounded-lg cursor-pointer transition-all hover:bg-white text-sm"
-                                   :class="$wire.selectedColors.includes('{{ $color }}') ? 'border-blue-500 bg-white' : 'border-gray-300'">
-                                <input type="checkbox" wire:model.live="selectedColors" value="{{ $color }}" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                <span>{{ $color }}</span>
+                    @forelse($variantAttributes as $attrIndex => $attrType)
+                        <!-- Paso {{ $attrIndex + 1 }}: {{ $attrType->nombre }} -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                {{ $attrIndex + 1 }}. Seleccionar {{ $attrType->nombre }}
                             </label>
-                            @endforeach
+                            <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                                @foreach($attrType->activeValues as $value)
+                                <label class="flex items-center justify-center p-2 border rounded-lg cursor-pointer transition-all hover:bg-white"
+                                       :class="($wire.selectedAttributeValues['{{ $attrType->slug }}'] ?? []).includes('{{ $value->valor }}') ? 'border-blue-500 bg-white' : 'border-gray-300'">
+                                    <input type="checkbox"
+                                           wire:model.live="selectedAttributeValues.{{ $attrType->slug }}"
+                                           value="{{ $value->valor }}"
+                                           class="sr-only">
+                                    <span class="text-sm font-bold">{{ $value->valor }}</span>
+                                </label>
+                                @endforeach
+                            </div>
                         </div>
-                    </div>
-
-                    <!-- Paso 2: Seleccionar Talles -->
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">2️⃣ Seleccionar Talles</label>
-                        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                            @foreach($availableSizes as $size)
-                            <label class="flex items-center justify-center p-2 border rounded-lg cursor-pointer transition-all hover:bg-white"
-                                   :class="$wire.selectedSizes.includes({{ $size['id'] }}) ? 'border-blue-500 bg-white' : 'border-gray-300'">
-                                <input type="checkbox" wire:model.live="selectedSizes" value="{{ $size['id'] }}" class="sr-only">
-                                <span class="text-sm font-bold">{{ $size['name'] }}</span>
-                            </label>
-                            @endforeach
+                    @empty
+                        <div class="text-center py-4 text-gray-500 text-sm">
+                            No hay atributos configurados. <a href="/configuracion/atributos" wire:navigate class="text-blue-600 underline">Configurar atributos</a>
                         </div>
-                    </div>
+                    @endforelse
 
-                    <!-- Paso 3: Generar -->
+                    <!-- Generar -->
                     <div class="mb-3">
                         <button type="button" wire:click="generateVariants"
                                 class="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                :disabled="$wire.selectedColors.length === 0 || $wire.selectedSizes.length === 0"
                                 wire:loading.attr="disabled" wire:target="generateVariants">
                             <span wire:loading.remove wire:target="generateVariants">
-                                3️⃣ Generar Variantes (<span x-text="($wire.selectedColors.length * $wire.selectedSizes.length)"></span>)
+                                Generar Variantes
                             </span>
                             <span wire:loading wire:target="generateVariants">
                                 Generando...
@@ -361,24 +373,22 @@
                             <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-100">
                                 <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Talle</th>
+                                    @foreach($variantAttributes as $attrType)
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ $attrType->nombre }}</th>
+                                    @endforeach
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($variants as $index => $variant)
                                 <tr>
+                                    @foreach($variant['attributes'] as $attr)
                                     <td class="px-4 py-2">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100">
-                                            {{ $variant['color'] }}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100">
+                                            {{ $attr['value'] }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-2">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100">
-                                            {{ $variant['size_name'] }}
-                                        </span>
-                                    </td>
+                                    @endforeach
                                     <td class="px-4 py-2">
                                         <input type="number" wire:model="variants.{{ $index }}.stock" min="0"
                                                class="w-20 px-2 py-1 border border-gray-300 rounded text-sm">
@@ -441,40 +451,75 @@
             <div x-show="activeTab === 'clasificacion'" class="p-6 space-y-6">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Línea (ID)</label>
-                        <input type="number" wire:model="linea" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Línea</label>
+                        <select wire:model="linea" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">— Sin línea —</option>
+                            @foreach($lineas as $l)
+                                <option value="{{ $l->id }}">{{ $l->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Marca (ID)</label>
-                        <input type="number" wire:model="marca" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Marca</label>
+                        <select wire:model="marca" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">— Sin marca —</option>
+                            @foreach($marcas as $m)
+                                <option value="{{ $m->id }}">{{ $m->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Familia (ID)</label>
                         <input type="number" wire:model="familia" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Grupo (ID)</label>
-                        <input type="number" wire:model="grupo" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Grupo</label>
+                        <select wire:model="grupo" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">— Sin grupo —</option>
+                            @foreach($grupos as $g)
+                                <option value="{{ $g->id }}">{{ $g->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Subgrupo (ID)</label>
-                        <input type="number" wire:model="subgrupo" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Subgrupo</label>
+                        <select wire:model="subgrupo" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">— Sin subgrupo —</option>
+                            @foreach($subgrupos as $sg)
+                                <option value="{{ $sg->id }}">{{ $sg->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Temporada (ID)</label>
-                        <input type="number" wire:model="temporada" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Temporada</label>
+                        <select wire:model="temporada" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">— Sin temporada —</option>
+                            @foreach($temporadas as $t)
+                                <option value="{{ $t->id }}">{{ $t->nombre }}{{ $t->anio ? ' '.$t->anio : '' }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Target (ID)</label>
-                        <input type="number" wire:model="target" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Target</label>
+                        <select wire:model="target" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">— Sin target —</option>
+                            @foreach($targets as $tg)
+                                <option value="{{ $tg->id }}">{{ $tg->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Edad (ID)</label>
                         <input type="number" wire:model="edad" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Procedencia (ID)</label>
-                        <input type="number" wire:model="procedencia" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Procedencia</label>
+                        <select wire:model="procedencia" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option value="">— Sin procedencia —</option>
+                            @foreach($procedencias as $pr)
+                                <option value="{{ $pr->id }}">{{ $pr->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre Grupo</label>
@@ -657,6 +702,30 @@
                     </div>
                 @endif
 
+                <!-- Aviso de herencia de imágenes del padre -->
+                @php
+                    $inheritConfig = \App\Models\ProductConfiguration::current();
+                @endphp
+                @if($product->images->isEmpty() && $product->parent_id && $inheritConfig->child_inherits_parent_images)
+                    @php
+                        $parentImages = $product->parent?->images ?? collect();
+                    @endphp
+                    <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+                        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="text-sm text-blue-800">
+                            <p class="font-semibold">Usando imágenes del producto padre</p>
+                            <p class="mt-1">Este producto no tiene imágenes propias. Se muestran las
+                                <strong>{{ $parentImages->count() }} imagen(es)</strong>
+                                del producto padre.
+                                <a href="/productos/{{ $product->parent_id }}/editar" wire:navigate class="underline hover:text-blue-600">Ver producto padre</a>.
+                            </p>
+                            <p class="mt-1 text-xs text-blue-600">Sube imágenes propias para reemplazar la herencia.</p>
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Grid de Miniaturas -->
                 <div class="flex flex-wrap gap-3 mb-6">
                     <!-- Imágenes Existentes -->
@@ -668,7 +737,7 @@
                                      alt="{{ $image->label ?? 'Foto' }}"
                                      class="w-full h-full object-contain p-2">
 
-                                @if($image->is_base)
+                                @if($image->is_base || $product->images->count() === 1)
                                     <!-- Badge PORTADA -->
                                     <div class="absolute bottom-0 left-0 right-0 bg-green-600 text-white text-center py-0.5">
                                         <span class="text-[10px] font-semibold uppercase">Portada</span>
@@ -781,21 +850,7 @@
                     </div>
                 </div>
 
-                <!-- Separador -->
-                <div class="my-8 border-t-2 border-gray-200"></div>
-
-                <!-- Legacy Single Images Section -->
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold text-gray-900 flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-                        </svg>
-                        Imágenes Legacy (Sistema Antiguo)
-                    </h3>
-                    <p class="text-sm text-gray-600 mt-1">Estos campos mantienen compatibilidad con el sistema anterior.</p>
-                </div>
-
-                <div class="space-y-6">
+                <div class="space-y-6 hidden">
                     <!-- Imagen Principal -->
                     <div class="border border-gray-300 rounded p-4 bg-white">
                         <label class="block text-sm font-medium text-gray-700 mb-3">Imagen Principal</label>

@@ -351,6 +351,18 @@
                             </div>
                         </div>
                     @endif
+
+                    <!-- Toggle: Heredar imágenes del padre -->
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex-1">
+                            <label class="text-sm font-semibold text-gray-900">Heredar imágenes del producto padre</label>
+                            <p class="text-xs text-gray-600 mt-1">Si un producto variante no tiene imágenes propias, usa las del producto padre en el listado y edición.</p>
+                        </div>
+                        <button type="button" wire:click="$toggle('childInheritsParentImages')"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {{ $childInheritsParentImages ? 'bg-blue-600' : 'bg-gray-200' }}">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {{ $childInheritsParentImages ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

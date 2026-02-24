@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Enums\ProductType;
+use App\Observers\ProductObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+#[ObservedBy(ProductObserver::class)]
 class Product extends Model
 {
     use HasFactory, SoftDeletes;
@@ -171,6 +174,8 @@ class Product extends Model
         'precosto_compra',
         'articulo_origen',
         'modelo_origen',
+        'atributos_extra',
+        'genero',
     ];
 
     protected function casts(): array
@@ -216,7 +221,74 @@ class Product extends Model
             'fecha_costo' => 'date',
             'fecha_venta1' => 'date',
             'fecha_ingreso' => 'date',
+            'atributos_extra' => 'array',
         ];
+    }
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::saving(function (Product $product): void {
+            // Auto-denormalizar nombres de lookup tables
+            if ($product->isDirty('temporada')) {
+                $product->n_temporada = $product->temporada
+                    ? Temporada::find($product->temporada)?->nombre
+                    : null;
+            }
+            if ($product->isDirty('grupo')) {
+                $product->n_grupo = $product->grupo
+                    ? Grupo::find($product->grupo)?->nombre
+                    : null;
+            }
+            if ($product->isDirty('subgrupo')) {
+                $product->n_subgrupo = $product->subgrupo
+                    ? Subgrupo::find($product->subgrupo)?->nombre
+                    : null;
+            }
+            if ($product->isDirty('target')) {
+                $product->n_target = $product->target
+                    ? Target::find($product->target)?->nombre
+                    : null;
+            }
+            if ($product->isDirty('procedencia')) {
+                $product->n_procedencia = $product->procedencia
+                    ? Procedencia::find($product->procedencia)?->nombre
+                    : null;
+            }
+
+            $product->busqueda = $product->buildBusqueda();
+        });
+    }
+
+    /**
+     * Construye el campo de búsqueda concatenando todos los atributos relevantes.
+     */
+    public function buildBusqueda(): string
+    {
+        $parts = array_filter([
+            $this->nombre,
+            $this->codigo_interno,
+            $this->codigo_barras,
+            $this->color,
+            $this->n_talle,
+            $this->genero,
+            $this->composicion,
+            $this->denominacion,
+            $this->n_color,
+            $this->marca ? (string) $this->marca : null,
+            $this->n_grupo,
+            $this->n_subgrupo,
+            $this->n_temporada,
+        ]);
+
+        if (is_array($this->atributos_extra)) {
+            foreach ($this->atributos_extra as $valor) {
+                $parts[] = $valor;
+            }
+        }
+
+        return strtolower(implode(' ', $parts));
     }
 
     /**
@@ -241,10 +313,9 @@ class Product extends Model
     public function scopeSearch($query, string $search)
     {
         return $query->where(function ($q) use ($search) {
-            $q->where('nombre', 'like', "%{$search}%")
-              ->orWhere('codigo_interno', 'like', "%{$search}%")
-              ->orWhere('codigo_barras', 'like', "%{$search}%")
-              ->orWhere('busqueda', 'like', "%{$search}%");
+            $q->whereFullText('busqueda', $search)
+                ->orWhere('codigo_interno', 'like', "{$search}%")
+                ->orWhere('codigo_barras', 'like', "{$search}%");
         });
     }
 
@@ -282,6 +353,41 @@ class Product extends Model
         return $this->belongsTo(Product::class, 'parent_id');
     }
 
+    public function marcaRelacion(): BelongsTo
+    {
+        return $this->belongsTo(Marca::class, 'marca');
+    }
+
+    public function lineaRelacion(): BelongsTo
+    {
+        return $this->belongsTo(Linea::class, 'linea');
+    }
+
+    public function temporadaRelacion(): BelongsTo
+    {
+        return $this->belongsTo(Temporada::class, 'temporada');
+    }
+
+    public function grupoRelacion(): BelongsTo
+    {
+        return $this->belongsTo(Grupo::class, 'grupo');
+    }
+
+    public function subgrupoRelacion(): BelongsTo
+    {
+        return $this->belongsTo(Subgrupo::class, 'subgrupo');
+    }
+
+    public function targetRelacion(): BelongsTo
+    {
+        return $this->belongsTo(Target::class, 'target');
+    }
+
+    public function procedenciaRelacion(): BelongsTo
+    {
+        return $this->belongsTo(Procedencia::class, 'procedencia');
+    }
+
     /**
      * Variantes/hijos del producto configurable.
      */
@@ -312,6 +418,28 @@ class Product extends Model
     public function baseImage()
     {
         return $this->images()->where('is_base', true)->first();
+    }
+
+    /**
+     * Imagen efectiva: propia si existe, o del padre si la configuración lo permite.
+     */
+    public function effectiveBaseImage(): ?ProductImage
+    {
+        $base = $this->images->firstWhere('is_base', true) ?? $this->images->first();
+
+        if ($base) {
+            return $base;
+        }
+
+        if ($this->parent_id && ProductConfiguration::current()->child_inherits_parent_images) {
+            $parentImages = $this->relationLoaded('parent')
+                ? $this->parent?->images
+                : $this->parent?->images()->orderBy('position')->get();
+
+            return $parentImages?->firstWhere('is_base', true) ?? $parentImages?->first();
+        }
+
+        return null;
     }
 
     // ==================== SCOPES ====================
@@ -379,7 +507,7 @@ class Product extends Model
      */
     public function getTotalVariantsStockAttribute(): int
     {
-        if (!$this->isConfigurable()) {
+        if (! $this->isConfigurable()) {
             return $this->stock;
         }
 
@@ -391,7 +519,7 @@ class Product extends Model
      */
     public function getAvailableColorsAttribute(): array
     {
-        if (!$this->isConfigurable()) {
+        if (! $this->isConfigurable()) {
             return [];
         }
 
@@ -407,7 +535,7 @@ class Product extends Model
      */
     public function getAvailableSizesAttribute(): array
     {
-        if (!$this->isConfigurable()) {
+        if (! $this->isConfigurable()) {
             return [];
         }
 
@@ -423,7 +551,7 @@ class Product extends Model
      */
     public function findVariant(?string $color = null, ?string $size = null): ?Product
     {
-        if (!$this->isConfigurable()) {
+        if (! $this->isConfigurable()) {
             return null;
         }
 
@@ -445,7 +573,7 @@ class Product extends Model
      */
     public function getMinVariantPriceAttribute(): ?float
     {
-        if (!$this->isConfigurable()) {
+        if (! $this->isConfigurable()) {
             return $this->precio;
         }
 
@@ -457,7 +585,7 @@ class Product extends Model
      */
     public function getMaxVariantPriceAttribute(): ?float
     {
-        if (!$this->isConfigurable()) {
+        if (! $this->isConfigurable()) {
             return $this->precio;
         }
 

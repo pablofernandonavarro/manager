@@ -12,9 +12,13 @@ class Index extends Component
     use WithPagination;
 
     public string $search = '';
+
     public int $perPage = 10;
+
     public string $filterEstado = 'todos';
+
     public string $filterStock = 'todos';
+
     public string $filterTipo = 'todos'; // Nuevo filtro
 
     /**
@@ -86,6 +90,11 @@ class Index extends Component
     public function render(): mixed
     {
         $products = Product::withTrashed()
+            ->withCount('variants')
+            ->with([
+                'images' => fn ($q) => $q->where('is_base', true)->limit(1),
+                'parent' => fn ($q) => $q->with(['images' => fn ($q) => $q->where('is_base', true)->limit(1)]),
+            ])
             ->when($this->search, function ($query) {
                 $query->search($this->search);
             })

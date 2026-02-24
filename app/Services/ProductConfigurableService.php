@@ -19,8 +19,8 @@ class ProductConfigurableService
     /**
      * Crea un producto configurable con sus variantes (estilo Magento 2).
      *
-     * @param array $configurableData Datos del producto configurable (padre)
-     * @param array $variants Array de variantes: [['color' => 'Rojo', 'talle' => 'M', 'stock' => 10], ...]
+     * @param  array  $configurableData  Datos del producto configurable (padre)
+     * @param  array  $variants  Array de variantes: [['color' => 'Rojo', 'talle' => 'M', 'stock' => 10], ...]
      * @return Product El producto configurable creado con sus variantes asociadas
      */
     public function createConfigurableWithVariants(array $configurableData, array $variants): Product
@@ -40,64 +40,66 @@ class ProductConfigurableService
     }
 
     /**
-     * Crea un producto simple (variante).
+     * Crea un producto simple (variante) con atributos dinámicos.
+     *
+     * @param  array<string, mixed>  $configurableData
+     * @param  array{attributes?: list<array{slug: string, product_column: string|null, value: string}>, stock?: int}  $variantData
      */
     protected function createSimpleProduct(array $configurableData, array $variantData): Product
     {
-        $codigoInterno = $configurableData['codigo_interno']
-            . '-' . strtoupper(substr($variantData['color'], 0, 3))
-            . '-' . $variantData['talle_nombre'];
+        $productData = [];
+        $attrExtra = [];
+        $allValues = [];
 
-        return Product::create([
+        foreach ($variantData['attributes'] ?? [] as $attr) {
+            $allValues[] = $attr['value'];
+            if ($attr['product_column']) {
+                $productData[$attr['product_column']] = $attr['value'];
+            } else {
+                $attrExtra[$attr['slug']] = $attr['value'];
+            }
+        }
+
+        $productData['atributos_extra'] = $attrExtra ?: null;
+
+        $suffix = implode('-', array_map(
+            fn ($a) => strtoupper(substr($a['value'], 0, 3)),
+            $variantData['attributes'] ?? []
+        ));
+
+        $productData['nombre'] = $configurableData['nombre']
+            .(count($allValues) > 0 ? ' - '.implode(' - ', $allValues) : '');
+
+        $productData['codigo_interno'] = $configurableData['codigo_interno']
+            .($suffix ? '-'.$suffix : '');
+
+        return Product::create(array_merge($productData, [
             'product_type' => ProductType::SIMPLE,
-            'parent_id' => null, // Se asignará después cuando se cree el configurable
-
-            // Información básica heredada + específica de variante
-            'nombre' => $configurableData['nombre'] . ' - ' . $variantData['color'] . ' - ' . $variantData['talle_nombre'],
-            'codigo_interno' => $codigoInterno,
-            'busqueda' => strtolower($configurableData['nombre'] . ' ' . $variantData['color'] . ' ' . $variantData['talle_nombre']),
+            'parent_id' => null,
             'codigo_barras' => $variantData['codigo_barras'] ?? null,
-
-            // Atributos de variante
-            'color' => $variantData['color'],
-            'n_color' => $variantData['color'],
-            'metadata_detalle2' => $variantData['talle_id'],
-            'n_talle' => $variantData['talle_nombre'],
-
-            // Descripción heredada
             'descripcion_web' => $configurableData['descripcion_web'] ?? null,
             'descripcion_tecnica' => $configurableData['descripcion_tecnica'] ?? null,
-
-            // Stock específico de la variante
             'stock' => $variantData['stock'] ?? 0,
             'stock_critico' => $configurableData['stock_critico'] ?? 10,
             'primera' => $variantData['primera'] ?? 0,
             'segunda' => $variantData['segunda'] ?? 0,
-
-            // Precios heredados del configurable
             'precio' => $configurableData['precio'] ?? 0,
             'costo' => $configurableData['costo'] ?? 0,
             'precio_usd' => $configurableData['precio_usd'] ?? null,
             'publico' => $configurableData['publico'] ?? null,
             'iva' => $configurableData['iva'] ?? 21,
-
-            // Clasificación heredada
             'linea' => $configurableData['linea'] ?? null,
             'marca' => $configurableData['marca'] ?? null,
             'familia' => $configurableData['familia'] ?? null,
             'grupo' => $configurableData['grupo'] ?? null,
             'subgrupo' => $configurableData['subgrupo'] ?? null,
             'temporada' => $configurableData['temporada'] ?? null,
-
-            // Metadata
             'articulo' => $configurableData['articulo'] ?? null,
-
-            // Flags
-            'es_vendible' => true, // Los simples SÍ se venden
+            'es_vendible' => true,
             'remitible' => $configurableData['remitible'] ?? true,
             'estado' => $configurableData['estado'] ?? 1,
             'publicar_ml' => $configurableData['publicar_ml'] ?? false,
-        ]);
+        ]));
     }
 
     /**
@@ -112,7 +114,6 @@ class ProductConfigurableService
             // Información básica
             'nombre' => $data['nombre'],
             'codigo_interno' => $data['codigo_interno'],
-            'busqueda' => strtolower($data['nombre'] . ' ' . $data['codigo_interno']),
             'codigo_barras' => $data['codigo_barras'] ?? null,
 
             // Sin color/talle específico (es el padre)
@@ -172,7 +173,7 @@ class ProductConfigurableService
      */
     public function addVariantsToConfigurable(Product $configurable, array $variants): Collection
     {
-        if (!$configurable->isConfigurable()) {
+        if (! $configurable->isConfigurable()) {
             throw new \InvalidArgumentException('El producto debe ser de tipo configurable');
         }
 
@@ -181,6 +182,7 @@ class ProductConfigurableService
         $newVariants = collect($variants)->map(function ($variantData) use ($configurableData) {
             $simple = $this->createSimpleProduct($configurableData, $variantData);
             $simple->update(['parent_id' => $configurableData['id']]);
+
             return $simple;
         });
 
@@ -192,25 +194,14 @@ class ProductConfigurableService
      */
     public function createVariantsForExisting(Product $configurable, array $configurableData, array $variants): void
     {
-        if (!$configurable->isConfigurable()) {
+        if (! $configurable->isConfigurable()) {
             throw new \InvalidArgumentException('El producto debe ser de tipo configurable');
         }
 
-        $createdCount = 0;
         foreach ($variants as $variantData) {
-            $variantData['talle_id'] = $variantData['size_id'];
-            $variantData['talle_nombre'] = $variantData['size_name'];
-
             $simple = $this->createSimpleProduct($configurableData, $variantData);
             $simple->update(['parent_id' => $configurable->id]);
-            $createdCount++;
         }
-
-        \Log::info('Variantes creadas', [
-            'configurable_id' => $configurable->id,
-            'variants_created' => $createdCount,
-            'variants_in_db' => $configurable->fresh()->variants()->count(),
-        ]);
     }
 
     /**
@@ -218,7 +209,7 @@ class ProductConfigurableService
      */
     public function detachVariant(Product $variant): Product
     {
-        if (!$variant->isSimple() || !$variant->parent_id) {
+        if (! $variant->isSimple() || ! $variant->parent_id) {
             throw new \InvalidArgumentException('El producto debe ser una variante con padre asignado');
         }
 
