@@ -74,13 +74,22 @@
                                            placeholder="Dirección">
                                 </div>
                             @else
-                                <div>
-                                    <span class="text-sm font-medium text-gray-900 {{ !$sucursal->activo ? 'line-through text-gray-400' : '' }}">
-                                        {{ $sucursal->nombre }}
-                                    </span>
-                                    @if($sucursal->direccion)
-                                        <p class="text-xs text-gray-500 mt-0.5">{{ $sucursal->direccion }}</p>
-                                    @endif
+                                <div class="flex items-center gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm font-medium text-gray-900 {{ !$sucursal->activo ? 'line-through text-gray-400' : '' }}">
+                                                {{ $sucursal->nombre }}
+                                            </span>
+                                            @if($sucursal->isCentral())
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                                    Central
+                                                </span>
+                                            @endif
+                                        </div>
+                                        @if($sucursal->direccion)
+                                            <p class="text-xs text-gray-500 mt-0.5">{{ $sucursal->direccion }}</p>
+                                        @endif
+                                    </div>
                                 </div>
                             @endif
                         </td>
@@ -98,10 +107,14 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center justify-center">
-                                <button type="button" wire:click="toggleActive({{ $sucursal->id }})"
-                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {{ $sucursal->activo ? 'bg-blue-600' : 'bg-gray-300' }}">
-                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform {{ $sucursal->activo ? 'translate-x-6' : 'translate-x-1' }}"></span>
-                                </button>
+                                @if($sucursal->isCentral())
+                                    <span class="text-xs text-gray-400 italic">siempre activa</span>
+                                @else
+                                    <button type="button" wire:click="toggleActive({{ $sucursal->id }})"
+                                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {{ $sucursal->activo ? 'bg-blue-600' : 'bg-gray-300' }}">
+                                        <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform {{ $sucursal->activo ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                                    </button>
+                                @endif
                             </div>
                         </td>
                         <td class="px-6 py-4 text-right">
@@ -116,6 +129,8 @@
                                         Cancelar
                                     </button>
                                 </div>
+                            @elseif($sucursal->isCentral())
+                                <span class="text-xs text-gray-400 italic px-2">—</span>
                             @else
                                 <div class="flex items-center justify-end gap-1">
                                     <a href="{{ route('sucursales.edit', $sucursal->id) }}"

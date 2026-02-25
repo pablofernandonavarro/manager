@@ -18,13 +18,20 @@ class Sucursal extends Model
         'direccion',
         'telefono',
         'activo',
+        'is_central',
     ];
 
     protected function casts(): array
     {
         return [
             'activo' => 'boolean',
+            'is_central' => 'boolean',
         ];
+    }
+
+    public function isCentral(): bool
+    {
+        return (bool) $this->is_central;
     }
 
     public function listasPrecios(): BelongsToMany

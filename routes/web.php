@@ -19,6 +19,7 @@ use App\Livewire\Permissions\Index as PermissionsIndex;
 use App\Livewire\Products\Create as ProductsCreate;
 use App\Livewire\Products\Edit as ProductsEdit;
 use App\Livewire\Products\Index as ProductsIndex;
+use App\Livewire\Products\Precios as ProductsPrecios;
 use App\Livewire\Products\Show as ProductsShow;
 use App\Livewire\PuntosDeVenta\Index as PuntosDeVentaIndex;
 use App\Livewire\Roles\Create as RolesCreate;
@@ -27,10 +28,12 @@ use App\Livewire\Roles\Index as RolesIndex;
 use App\Livewire\Sucursales\Edit as SucursalesEdit;
 use App\Livewire\Sucursales\Index as SucursalesIndex;
 use App\Livewire\Sucursales\ListasPrecios as SucursalesListasPrecios;
+use App\Livewire\Sucursales\Remitos as SucursalesRemitos;
 use App\Livewire\Sucursales\Stock as SucursalesStock;
 use App\Livewire\Users\Create;
 use App\Livewire\Users\Edit;
 use App\Livewire\Users\Index;
+use App\Models\Remito;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -65,6 +68,7 @@ Route::middleware('auth')->group(function () {
     // Productos (CRUD)
     Route::get('/productos', ProductsIndex::class)->name('productos.index');
     Route::get('/productos/crear', ProductsCreate::class)->name('productos.create');
+    Route::get('/productos/precios', ProductsPrecios::class)->name('productos.precios');
     Route::get('/productos/{productId}', ProductsShow::class)->name('productos.show');
     Route::get('/productos/{productId}/editar', ProductsEdit::class)->name('productos.edit');
 
@@ -101,6 +105,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/sucursales', SucursalesIndex::class)->name('sucursales.index');
     Route::get('/sucursales/listas-precios', SucursalesListasPrecios::class)->name('sucursales.listas-precios');
     Route::get('/sucursales/stock', SucursalesStock::class)->name('sucursales.stock');
+    Route::get('/sucursales/remitos', SucursalesRemitos::class)->name('sucursales.remitos');
+    Route::get('/sucursales/remitos/{id}/imprimir', function (int $id) {
+        $remito = Remito::with(['sucursalOrigen', 'sucursalDestino', 'detalles.product', 'user'])->findOrFail($id);
+
+        return view('remitos.imprimir', compact('remito'));
+    })->name('remitos.imprimir');
     Route::get('/sucursales/{id}/editar', SucursalesEdit::class)->name('sucursales.edit');
 
     // Puntos de venta

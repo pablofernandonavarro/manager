@@ -83,7 +83,6 @@
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Código</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Producto</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Tipo</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Precio</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Stock</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
                         <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
@@ -170,11 +169,6 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-semibold text-gray-900">
-                                    ${{ number_format($product->precio ?? 0, 2) }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
                                 @if($product->stock <= 0)
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 ring-1 ring-red-600/20">
                                         Sin stock
@@ -240,7 +234,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-16 text-center">
+                            <td colspan="6" class="px-6 py-16 text-center">
                                 <div class="flex flex-col items-center justify-center">
                                     <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>

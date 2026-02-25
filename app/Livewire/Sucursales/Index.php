@@ -70,12 +70,23 @@ class Index extends Component
     public function toggleActive(int $id): void
     {
         $sucursal = Sucursal::findOrFail($id);
+
+        if ($sucursal->isCentral()) {
+            return;
+        }
+
         $sucursal->update(['activo' => ! $sucursal->activo]);
     }
 
     public function delete(int $id): void
     {
-        Sucursal::findOrFail($id)->delete();
+        $sucursal = Sucursal::findOrFail($id);
+
+        if ($sucursal->isCentral()) {
+            return;
+        }
+
+        $sucursal->delete();
     }
 
     #[Layout('layouts.app')]

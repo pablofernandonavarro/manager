@@ -49,14 +49,36 @@
                     Dashboard
                 </a>
 
-                <!-- Productos — link directo -->
-                <a href="/productos"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('productos*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
-                    Productos
-                </a>
+                <!-- Productos con submenú -->
+                @php $productosOpen = request()->is('productos*'); @endphp
+                <div x-data="{ productosOpen: @js($productosOpen) }">
+                    <button @click="productosOpen = !productosOpen"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors {{ $productosOpen ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                            <span>Productos</span>
+                        </div>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': productosOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div x-show="productosOpen" @if(!$productosOpen) style="display:none" @endif class="mt-1 ml-4 space-y-1">
+                        <a href="/productos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos') || request()->is('productos/crear') || request()->is('productos/*/editar') || (request()->is('productos/*') && !request()->is('productos/precios')) ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                            <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                            </svg>
+                            Catálogo
+                        </a>
+                        <a href="/productos/precios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos/precios') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                            <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                            </svg>
+                            Ver listas de precio
+                        </a>
+                    </div>
+                </div>
 
                 <a href="/ventas"
                    class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('ventas*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
@@ -241,6 +263,12 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                     </svg>
                                     Stock
+                                </a>
+                                <a href="/sucursales/remitos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/remitos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
+                                    Remitos
                                 </a>
                             </div>
                         </div>
