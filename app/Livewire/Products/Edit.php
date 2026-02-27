@@ -854,7 +854,6 @@ class Edit extends Component
             'costo' => $this->costo,
             'costo_usd' => $this->costo_usd,
             'costo_produccion' => $this->costo_produccion,
-            'stock' => $this->stock,
             'stock_critico' => $this->stock_critico,
             'stock_comprometido' => $this->stock_comprometido,
             'stock_ml' => $this->stock_ml,

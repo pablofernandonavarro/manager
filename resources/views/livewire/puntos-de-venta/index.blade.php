@@ -10,30 +10,40 @@
     <!-- Formulario nuevo POS -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h3 class="text-base font-semibold text-gray-900 mb-4">Nuevo punto de venta</h3>
-        <div class="flex gap-3 flex-wrap">
-            <div class="flex-1 min-w-48">
-                <select wire:model="sucursalId"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('sucursalId') border-red-300 @enderror">
-                    <option value="">Seleccioná una sucursal...</option>
-                    @foreach($sucursales as $sucursal)
-                        <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
-                    @endforeach
-                </select>
-                @error('sucursalId') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+
+        @if($sucursales->isEmpty())
+            <div class="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                No hay sucursales activas. Primero creá una sucursal para poder agregar puntos de venta.
             </div>
-            <div class="flex-1 min-w-48 flex gap-2">
-                <input type="text"
-                       wire:model="nombre"
-                       wire:keydown.enter.prevent="save"
-                       placeholder="Nombre del POS (ej: Caja 1)..."
-                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('nombre') border-red-300 @enderror">
-                <button type="button" wire:click="save"
-                        class="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">
-                    + Agregar
-                </button>
+        @else
+            <div class="flex gap-3 flex-wrap">
+                <div class="flex-1 min-w-48">
+                    <select wire:model="sucursalId"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('sucursalId') border-red-300 @enderror">
+                        <option value="">Seleccioná una sucursal...</option>
+                        @foreach($sucursales as $sucursal)
+                            <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+                        @endforeach
+                    </select>
+                    @error('sucursalId') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div class="flex-1 min-w-48 flex gap-2">
+                    <input type="text"
+                           wire:model="nombre"
+                           wire:keydown.enter.prevent="save"
+                           placeholder="Nombre del POS (ej: Caja 1)..."
+                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('nombre') border-red-300 @enderror">
+                    <button type="button" wire:click="save"
+                            class="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">
+                        + Agregar
+                    </button>
+                </div>
             </div>
-        </div>
-        @error('nombre') <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p> @enderror
+            @error('nombre') <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p> @enderror
+        @endif
     </div>
 
     <!-- Listado -->
@@ -60,8 +70,8 @@
                         </td>
                         <td class="px-6 py-4 text-center">
                             <button type="button" wire:click="toggleActive({{ $pdv->id }})"
-                                    class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none {{ $pdv->activo ? 'bg-blue-600' : 'bg-gray-200' }}">
-                                <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform {{ $pdv->activo ? 'translate-x-4.5' : 'translate-x-0.5' }}"></span>
+                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none {{ $pdv->activo ? 'bg-blue-600' : 'bg-gray-300' }}">
+                                <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform {{ $pdv->activo ? 'translate-x-6' : 'translate-x-1' }}"></span>
                             </button>
                         </td>
                         <td class="px-6 py-4 text-right">
@@ -70,10 +80,6 @@
                                         @click="confirm('¿Regenerar el secret de \'{{ $pdv->nombre }}\'?\nEl secret anterior dejará de funcionar.') && $wire.regenerarSecret({{ $pdv->id }})"
                                         class="px-2.5 py-1 text-xs font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors">
                                     Secret
-                                </button>
-                                <button type="button" wire:click="generarToken({{ $pdv->id }})"
-                                        class="px-2.5 py-1 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
-                                    Token
                                 </button>
                                 <button type="button" wire:click="revocarTokens({{ $pdv->id }})"
                                         wire:confirm="¿Revocar todos los tokens de '{{ $pdv->nombre }}'?"

@@ -21,6 +21,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('sync/productos', [SyncController::class, 'productos']);
         Route::get('sync/precios', [SyncController::class, 'precios']);
         Route::get('sync/stock', [SyncController::class, 'stock']);
+        Route::get('sync/remitos', [SyncController::class, 'remitos']);
+        Route::post('sync/remitos/{id}/confirmar', [SyncController::class, 'confirmarRemito']);
         Route::post('sync/ventas', [SyncController::class, 'ventas']);
         Route::post('sync/movimientos', [SyncController::class, 'movimientos']);
         Route::get('precios/{productId}', [SyncController::class, 'precio']);

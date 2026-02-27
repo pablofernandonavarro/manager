@@ -11,6 +11,7 @@ class StockSyncResource extends JsonResource
     {
         return [
             'product_id' => $this->product_id,
+            'codigo_interno' => $this->product?->codigo_interno,
             'cantidad' => $this->cantidad,
         ];
     }

@@ -30,6 +30,10 @@ class PosAuthController extends Controller
             return response()->json(['message' => 'Credenciales incorrectas.'], 401);
         }
 
+        if (! $pdv->sucursal) {
+            return response()->json(['message' => 'El punto de venta no tiene una sucursal válida asignada.'], 500);
+        }
+
         $pdv->tokens()->delete();
         $token = $pdv->createToken('pos-sync')->plainTextToken;
 

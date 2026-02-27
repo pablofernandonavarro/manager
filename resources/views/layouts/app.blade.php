@@ -264,6 +264,12 @@
                                     </svg>
                                     Stock
                                 </a>
+                                <a href="/sucursales/ajuste-stock" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/ajuste-stock*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Ajuste de stock
+                                </a>
                                 <a href="/sucursales/remitos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/remitos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                                     <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -325,80 +331,80 @@
         </div>
     </div>
 
-    <!-- Modal: Secret POS -->
+    <!-- Modal: Credenciales de conexión POS -->
     <div x-data="{
              show: false,
              secretText: '',
-             secretNombre: ''
+             secretNombre: '',
+             pdvId: null,
+             managerUrl: '{{ config('app.url') }}/api/v1',
+             copyText(text, btn) {
+                 var t = document.createElement('textarea');
+                 t.value = String(text);
+                 t.style.cssText = 'position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+                 document.body.appendChild(t);
+                 t.focus();
+                 t.select();
+                 document.execCommand('copy');
+                 document.body.removeChild(t);
+                 var prev = btn.textContent;
+                 btn.textContent = '✓ Copiado';
+                 setTimeout(() => btn.textContent = prev, 1500);
+             }
          }"
-         @secret-generado.window="show = true; secretText = $event.detail.secret; secretNombre = $event.detail.nombre"
+         @secret-generado.window="show = true; secretText = $event.detail.secret; secretNombre = $event.detail.nombre; pdvId = $event.detail.pdvId"
          style="display:none"
-         :style="show ? 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center' : 'display:none'">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full mx-4" style="max-width:28rem" @click.stop>
-            <div class="flex items-center gap-3 mb-4">
-                <div class="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Secret de "<span x-text="secretNombre"></span>"</h3>
-                    <p class="text-xs text-red-600 font-medium">Solo se muestra una vez. Guardalo ahora.</p>
-                </div>
+         :style="show ? 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center' : 'display:none'">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full mx-4" style="max-width:30rem" @click.stop>
+            <!-- Header -->
+            <div class="mb-5">
+                <h3 class="text-lg font-semibold text-white">Datos de conexión — <span class="text-blue-400" x-text="secretNombre"></span></h3>
+                <p class="text-xs text-yellow-400 font-medium mt-1">La Clave Secreta solo se muestra una vez. Guardala ahora.</p>
             </div>
-            <div class="bg-gray-50 border border-yellow-300 rounded-lg p-3 mb-4">
-                <textarea x-ref="secretInput" readonly rows="2" :value="secretText"
-                          class="w-full text-sm text-gray-900 font-mono bg-transparent border-none outline-none resize-none"></textarea>
-            </div>
-            <div class="flex gap-2 justify-end">
-                <button type="button"
-                        @click="$refs.secretInput.select(); document.execCommand('copy'); var b=$el; b.textContent='✓ Copiado'; setTimeout(()=>b.textContent='Copiar',1500)"
-                        class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors">
-                    Copiar
-                </button>
-                <button type="button" @click="show = false"
-                        class="px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors">
-                    Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Modal: Token POS -->
-    <div x-data="{
-             show: false,
-             tokenText: ''
-         }"
-         @token-generado.window="show = true; tokenText = $event.detail.token"
-         style="display:none"
-         :style="show ? 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center' : 'display:none'">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full mx-4" style="max-width:28rem" @click.stop>
-            <div class="flex items-center gap-3 mb-4">
-                <div class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Token generado</h3>
-                    <p class="text-xs text-gray-500">Solo se muestra una vez. Copialo ahora.</p>
+            <!-- URL del Servidor Manager -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">URL del Servidor Manager</label>
+                <div class="flex gap-2">
+                    <input type="text" readonly :value="managerUrl"
+                           class="flex-1 px-3 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-100 font-mono outline-none">
+                    <button type="button" @click="copyText(managerUrl, $el)"
+                            class="px-3 py-2 bg-gray-600 text-gray-300 text-xs rounded-lg hover:bg-gray-500 transition-colors whitespace-nowrap">
+                        Copiar
+                    </button>
                 </div>
             </div>
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
-                <textarea x-ref="tokenInput" readonly rows="3" :value="tokenText"
-                          class="w-full text-xs text-gray-800 font-mono bg-transparent border-none outline-none resize-none"></textarea>
+
+            <!-- ID del Punto de Venta -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">ID del Punto de Venta</label>
+                <div class="flex gap-2">
+                    <input type="text" readonly :value="pdvId"
+                           class="flex-1 px-3 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-100 font-mono outline-none">
+                    <button type="button" @click="copyText(pdvId, $el)"
+                            class="px-3 py-2 bg-gray-600 text-gray-300 text-xs rounded-lg hover:bg-gray-500 transition-colors whitespace-nowrap">
+                        Copiar
+                    </button>
+                </div>
             </div>
-            <div class="flex gap-2 justify-end">
-                <button type="button"
-                        @click="$refs.tokenInput.select(); document.execCommand('copy'); var b=$el; b.textContent='✓ Copiado'; setTimeout(()=>b.textContent='Copiar',1500)"
-                        class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors">
-                    Copiar
-                </button>
-                <button type="button" @click="show = false"
-                        class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                    Cerrar
-                </button>
+
+            <!-- Clave Secreta -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Clave Secreta</label>
+                <div class="flex gap-2">
+                    <input type="text" readonly :value="secretText"
+                           class="flex-1 px-3 py-2.5 bg-gray-700 border border-yellow-600 rounded-lg text-sm text-yellow-100 font-mono outline-none">
+                    <button type="button" @click="copyText(secretText, $el)"
+                            class="px-3 py-2 bg-gray-600 text-gray-300 text-xs rounded-lg hover:bg-gray-500 transition-colors whitespace-nowrap">
+                        Copiar
+                    </button>
+                </div>
             </div>
+
+            <button type="button" @click="show = false"
+                    class="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors">
+                Cerrar
+            </button>
         </div>
     </div>
 

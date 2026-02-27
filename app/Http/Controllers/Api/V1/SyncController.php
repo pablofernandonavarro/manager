@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\EstadoRemito;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SyncMovimientosRequest;
 use App\Http\Requests\Api\V1\SyncVentasRequest;
@@ -12,6 +13,7 @@ use App\Models\DetallePrecio;
 use App\Models\DetalleVenta;
 use App\Models\MovimientoStock;
 use App\Models\Product;
+use App\Models\Remito;
 use App\Models\StockSucursal;
 use App\Models\Venta;
 use Illuminate\Http\JsonResponse;
@@ -22,10 +24,22 @@ class SyncController extends Controller
 {
     /**
      * Catálogo de productos con soporte a delta sync.
+     * Incluye el stock de la sucursal del POS via subquery (sin N+1).
      */
     public function productos(Request $request): JsonResponse
     {
-        $query = Product::query()->where('es_vendible', true);
+        /** @var \App\Models\PuntoDeVenta $pdv */
+        $pdv = $request->user();
+
+        $query = Product::query()
+            ->where('es_vendible', true)
+            ->addSelect([
+                'products.*',
+                'stock_sucursal' => StockSucursal::select('cantidad')
+                    ->whereColumn('product_id', 'products.id')
+                    ->where('sucursal_id', $pdv->sucursal_id)
+                    ->limit(1),
+            ]);
 
         if ($request->filled('updated_since')) {
             $query->where('updated_at', '>', $request->updated_since);
@@ -36,11 +50,13 @@ class SyncController extends Controller
         return response()->json([
             'data' => ProductSyncResource::collection($productos),
             'total' => $productos->count(),
+            'synced_at' => now()->toIso8601String(),
         ]);
     }
 
     /**
      * Listas de precios asignadas a la sucursal del POS autenticado.
+     * Soporta delta sync con ?updated_since=ISO8601
      */
     public function precios(Request $request): JsonResponse
     {
@@ -49,7 +65,12 @@ class SyncController extends Controller
 
         $listasIds = $pdv->sucursal->listasPrecios()->pluck('listas_precios.id');
 
-        $detalles = DetallePrecio::whereIn('lista_precio_id', $listasIds)->get();
+        $query = DetallePrecio::with('product:id,codigo_interno')
+            ->whereIn('lista_precio_id', $listasIds);
+
+        if ($request->filled('updated_since')) {
+            $query->where('updated_at', '>', $request->updated_since);
+        }
 
         $listas = $pdv->sucursal->listasPrecios()->get()->map(fn ($lista) => [
             'id' => $lista->id,
@@ -60,22 +81,116 @@ class SyncController extends Controller
 
         return response()->json([
             'listas' => $listas,
-            'precios' => PrecioSyncResource::collection($detalles),
+            'precios' => PrecioSyncResource::collection($query->get()),
+            'synced_at' => now()->toIso8601String(),
         ]);
     }
 
     /**
      * Stock de la sucursal del POS autenticado.
+     * Soporta delta sync con ?updated_since=ISO8601
      */
     public function stock(Request $request): JsonResponse
     {
         /** @var \App\Models\PuntoDeVenta $pdv */
         $pdv = $request->user();
 
-        $stock = StockSucursal::where('sucursal_id', $pdv->sucursal_id)->get();
+        $query = StockSucursal::with('product:id,codigo_interno')
+            ->where('sucursal_id', $pdv->sucursal_id);
+
+        if ($request->filled('updated_since')) {
+            $query->where('updated_at', '>', $request->updated_since);
+        }
 
         return response()->json([
-            'data' => StockSyncResource::collection($stock),
+            'data' => StockSyncResource::collection($query->get()),
+            'synced_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Remitos en tránsito hacia la sucursal del POS autenticado.
+     */
+    public function remitos(Request $request): JsonResponse
+    {
+        /** @var \App\Models\PuntoDeVenta $pdv */
+        $pdv = $request->user();
+
+        $remitos = Remito::with(['sucursalOrigen', 'detalles.product'])
+            ->where('sucursal_destino_id', $pdv->sucursal_id)
+            ->where('estado', EstadoRemito::Remitido)
+            ->orderByDesc('remitido_at')
+            ->get();
+
+        $data = $remitos->map(fn ($remito) => [
+            'id' => $remito->id,
+            'sucursal_origen' => $remito->sucursalOrigen->nombre,
+            'observaciones' => $remito->observaciones,
+            'remitido_at' => $remito->remitido_at->toIso8601String(),
+            'detalles' => $remito->detalles->map(fn ($d) => [
+                'product_id' => $d->product_id,
+                'nombre' => $d->product->nombre,
+                'codigo_interno' => $d->product->codigo_interno,
+                'cantidad' => $d->cantidad,
+            ]),
+        ]);
+
+        return response()->json(['data' => $data]);
+    }
+
+    /**
+     * Confirma la recepción de un remito desde el POS.
+     */
+    public function confirmarRemito(Request $request, int $id): JsonResponse
+    {
+        /** @var \App\Models\PuntoDeVenta $pdv */
+        $pdv = $request->user();
+
+        $remito = Remito::with('detalles.product:id,codigo_interno')->find($id);
+
+        if (! $remito) {
+            return response()->json(['message' => 'Remito no encontrado.'], 404);
+        }
+
+        if ($remito->sucursal_destino_id !== $pdv->sucursal_id) {
+            return response()->json(['message' => 'No autorizado.'], 403);
+        }
+
+        if ($remito->estado !== EstadoRemito::Remitido) {
+            return response()->json(['message' => 'El remito no está en estado remitido.'], 422);
+        }
+
+        $stockActualizado = [];
+
+        DB::transaction(function () use ($remito, &$stockActualizado): void {
+            foreach ($remito->detalles as $detalle) {
+                $stock = StockSucursal::firstOrCreate(
+                    ['sucursal_id' => $remito->sucursal_destino_id, 'product_id' => $detalle->product_id],
+                    ['cantidad' => 0]
+                );
+                $stock->increment('cantidad', $detalle->cantidad);
+                $stock->refresh();
+
+                $stockActualizado[] = [
+                    'product_id' => $detalle->product_id,
+                    'codigo_interno' => $detalle->product->codigo_interno,
+                    'cantidad' => $stock->cantidad,
+                ];
+
+                $totalGlobal = StockSucursal::where('product_id', $detalle->product_id)->sum('cantidad');
+                Product::where('id', $detalle->product_id)->update(['stock' => $totalGlobal]);
+            }
+
+            $remito->update([
+                'estado' => EstadoRemito::Confirmado,
+                'confirmado_at' => now(),
+            ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Recepción confirmada.',
+            'stock_actualizado' => $stockActualizado,
         ]);
     }
 
@@ -174,7 +289,7 @@ class SyncController extends Controller
 
                 $stockSucursal = StockSucursal::firstOrNew([
                     'sucursal_id' => $pdv->sucursal_id,
-                    'product_id' => $mov['product_id']
+                    'product_id' => $mov['product_id'],
                 ]);
 
                 $cantidadActual = $stockSucursal->cantidad ?? 0;
