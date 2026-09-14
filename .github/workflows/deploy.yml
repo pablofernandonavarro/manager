@@ -1,0 +1,113 @@
+name: Tests y deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Nunca dos deploys a la vez: el segundo espera a que termine el primero.
+concurrency:
+  group: manager-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        # La misma versión que el Docker de desarrollo.
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: testing
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -ppassword"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: password
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, zip, gd, intl, bcmath, soap
+          coverage: none
+
+      - name: Caché de Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Las pantallas usan @vite: sin el manifest los tests de páginas fallan.
+      - run: npm ci && npm run build
+
+      # --force: .env.example dice APP_ENV=production y key:generate pediría confirmación.
+      - run: cp .env.example .env && php artisan key:generate --force
+
+      - run: php vendor/bin/phpunit
+
+  deploy:
+    needs: tests
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, zip, gd, intl, bcmath, soap
+          coverage: none
+
+      - run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci && npm run build
+
+      - name: Empaquetar
+        run: |
+          echo "RELEASE=$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          tar -czf /tmp/release.tgz \
+            --exclude=./.git --exclude=./node_modules --exclude=./tests \
+            --exclude=./storage --exclude=./.env --exclude=./.github .
+
+      - name: Clave SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Subir y activar
+        env:
+          DESTINO: deploy@${{ secrets.DEPLOY_HOST }}
+        run: |
+          scp -i ~/.ssh/deploy /tmp/release.tgz "$DESTINO:/tmp/manager-$RELEASE.tgz"
+          ssh -i ~/.ssh/deploy "$DESTINO" "set -e
+            mkdir -p /var/www/manager/releases/$RELEASE
+            tar -xzf /tmp/manager-$RELEASE.tgz -C /var/www/manager/releases/$RELEASE
+            rm /tmp/manager-$RELEASE.tgz
+            bash /var/www/manager/releases/$RELEASE/deploy/activar.sh $RELEASE"
+
+      - name: Verificar que responde
+        run: curl -fsS -o /dev/null -w '%{http_code}\n' "https://${{ vars.DEPLOY_DOMINIO }}/login"
