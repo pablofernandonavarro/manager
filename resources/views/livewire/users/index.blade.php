@@ -114,7 +114,7 @@
                                                 </span>
                                             @endif
                                         </div>
-                                        <div class="text-sm text-gray-500">{{ $user->email }}</div>
+                                        <div class="text-sm text-gray-500">{{ $user->email ?? 'Sin acceso al Manager' }}</div>
                                     </div>
                                 </div>
                             </td>
@@ -132,6 +132,12 @@
                                     </span>
                                 @else
                                     <span class="text-sm text-gray-400 italic">Sin rol</span>
+                                @endif
+                                @if($user->rolDeCaja())
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        Caja: {{ $user->sucursales->pluck('nombre')->implode(', ') ?: 'sin sucursal' }}
+                                        @unless($user->getRawOriginal('pin_hash')) · <span class="text-amber-600">sin PIN</span> @endunless
+                                    </div>
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">

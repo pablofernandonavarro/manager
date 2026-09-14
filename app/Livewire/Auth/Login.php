@@ -28,10 +28,15 @@ class Login extends Component
     {
         $this->validate();
 
-        if (Auth::attempt(['email' => $this->email, 'password' => $this->password])) {
-            request()->session()->regenerate();
+        // Los inactivos no entran, y los cajeros tampoco: usan su PIN en la caja.
+        $credenciales = ['email' => $this->email, 'password' => $this->password, 'active' => true];
+
+        if (Auth::attemptWhen($credenciales, fn ($user) => ! $user->hasRole('cajero'))) {
+            session()->regenerate();
 
             $this->redirect('/dashboard', navigate: true);
+
+            return;
         }
 
         $this->addError('email', 'Las credenciales proporcionadas no son correctas.');

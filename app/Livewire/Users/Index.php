@@ -3,16 +3,22 @@
 namespace App\Livewire\Users;
 
 use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class Index extends Component
 {
-    use WithPagination;
+    use AuthorizesRequests, WithPagination;
 
     public string $search = '';
     public int $perPage = 10;
+
+    public function mount(): void
+    {
+        $this->authorize('usuarios.ver');
+    }
 
     /**
      * Resetea la paginación cuando se realiza una búsqueda.
@@ -27,6 +33,8 @@ class Index extends Component
      */
     public function toggleActive(int $userId): void
     {
+        $this->authorize('usuarios.editar');
+
         $user = User::findOrFail($userId);
 
         // No permitir desactivar al usuario actual
@@ -45,6 +53,8 @@ class Index extends Component
      */
     public function delete(int $userId): void
     {
+        $this->authorize('usuarios.eliminar');
+
         $user = User::withTrashed()->findOrFail($userId);
 
         // No permitir eliminar al usuario actual
@@ -63,6 +73,8 @@ class Index extends Component
      */
     public function restore(int $userId): void
     {
+        $this->authorize('usuarios.eliminar');
+
         $user = User::withTrashed()->findOrFail($userId);
         $user->restore();
 
@@ -79,14 +91,9 @@ class Index extends Component
                       ->orWhere('email', 'like', '%' . $this->search . '%');
                 });
             })
-            ->with('roles')
+            ->with(['roles', 'sucursales:id,nombre'])
             ->orderBy('created_at', 'desc')
             ->paginate($this->perPage);
-
-        // Debug: log el total de usuarios
-        \Log::info('Total usuarios en consulta: ' . User::withTrashed()->count());
-        \Log::info('Usuarios en página actual: ' . $users->count());
-        \Log::info('Total de resultados: ' . $users->total());
 
         return view('livewire.users.index', [
             'users' => $users,

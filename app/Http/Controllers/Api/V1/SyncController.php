@@ -11,13 +11,13 @@ use App\Http\Resources\Api\V1\PrecioSyncResource;
 use App\Http\Resources\Api\V1\ProductSyncResource;
 use App\Http\Resources\Api\V1\StockSyncResource;
 use App\Jobs\AutorizarComprobante;
-use App\Models\Cajero;
 use App\Models\DetallePrecio;
 use App\Models\MovimientoStock;
 use App\Models\Product;
 use App\Models\PromocionBancaria;
 use App\Models\Remito;
 use App\Models\StockSucursal;
+use App\Models\User;
 use App\Services\RegistroVentasPos;
 use App\Services\RemitoService;
 use Illuminate\Http\JsonResponse;
@@ -222,6 +222,9 @@ class SyncController extends Controller
     /**
      * Cajeros habilitados en la sucursal del POS, con el PIN hasheado (bcrypt): la caja
      * verifica el PIN localmente para poder abrir y autorizar sin conexión.
+     *
+     * Son usuarios con rol cajero o supervisor asignados a la sucursal. El contrato
+     * (id, nombre, rol, pin_hash) es el mismo que cuando había una tabla `cajeros`.
      */
     public function cajeros(Request $request): JsonResponse
     {
@@ -229,12 +232,12 @@ class SyncController extends Controller
         $pdv = $request->user();
 
         return response()->json([
-            'data' => Cajero::paraSucursal($pdv->sucursal_id)->orderBy('nombre')->get()
-                ->map(fn (Cajero $c) => [
-                    'id' => $c->id,
-                    'nombre' => $c->nombre,
-                    'rol' => $c->rol,
-                    'pin_hash' => $c->pin_hash,
+            'data' => User::deCajaEnSucursal($pdv->sucursal_id)->with('roles')->orderBy('name')->get()
+                ->map(fn (User $u) => [
+                    'id' => $u->id,
+                    'nombre' => $u->name,
+                    'rol' => $u->rolDeCaja(),
+                    'pin_hash' => $u->pin_hash,
                 ])->values(),
         ]);
     }

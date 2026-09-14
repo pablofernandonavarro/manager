@@ -50,7 +50,7 @@
                 <!-- Email -->
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-                        Correo electrónico <span class="text-red-500">*</span>
+                        Correo electrónico @if($role !== 'cajero')<span class="text-red-500">*</span>@else<span class="text-xs text-gray-400">(opcional para cajeros)</span>@endif
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -79,7 +79,7 @@
                 <!-- Contraseña -->
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                        Contraseña <span class="text-red-500">*</span>
+                        Contraseña @if($role !== 'cajero')<span class="text-red-500">*</span>@else<span class="text-xs text-gray-400">(opcional para cajeros)</span>@endif
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -119,7 +119,7 @@
                     </label>
                     <select
                         id="role"
-                        wire:model="role"
+                        wire:model.live="role"
                         class="block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors @error('role') border-red-300 ring-2 ring-red-200 @enderror"
                     >
                         <option value="">Seleccionar rol...</option>
@@ -142,6 +142,8 @@
                         </p>
                     @enderror
                 </div>
+
+                @include('livewire.users._caja')
 
                 <!-- Estado Activo -->
                 <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">

@@ -6,7 +6,6 @@ use App\Livewire\Auth\ForgotPassword;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\ResetPassword;
 use App\Livewire\Cajas\Cierres as CajasCierres;
-use App\Livewire\Cajeros\Index as CajerosIndex;
 use App\Livewire\Clientes\CuentaCorriente as ClientesCuentaCorriente;
 use App\Livewire\Clientes\Index as ClientesIndex;
 use App\Livewire\Configuration\Grupos;
@@ -89,18 +88,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/productos/{productId}', ProductsShow::class)->name('productos.show');
     Route::get('/productos/{productId}/editar', ProductsEdit::class)->name('productos.edit');
 
-    // Usuarios (CRUD)
-    Route::get('/usuarios', Index::class)->name('usuarios.index');
-    Route::get('/usuarios/crear', Create::class)->name('usuarios.create');
-    Route::get('/usuarios/{userId}/editar', Edit::class)->name('usuarios.edit');
+    // Usuarios (CRUD). Con permiso: quien crea usuarios o toca roles puede darse admin.
+    Route::get('/usuarios', Index::class)->middleware('can:usuarios.ver')->name('usuarios.index');
+    Route::get('/usuarios/crear', Create::class)->middleware('can:usuarios.crear')->name('usuarios.create');
+    Route::get('/usuarios/{userId}/editar', Edit::class)->middleware('can:usuarios.editar')->name('usuarios.edit');
 
     // Roles (CRUD)
-    Route::get('/roles', RolesIndex::class)->name('roles.index');
-    Route::get('/roles/crear', RolesCreate::class)->name('roles.create');
-    Route::get('/roles/{roleId}/editar', RolesEdit::class)->name('roles.edit');
+    Route::get('/roles', RolesIndex::class)->middleware('can:usuarios.editar')->name('roles.index');
+    Route::get('/roles/crear', RolesCreate::class)->middleware('can:usuarios.editar')->name('roles.create');
+    Route::get('/roles/{roleId}/editar', RolesEdit::class)->middleware('can:usuarios.editar')->name('roles.edit');
 
     // Permisos (Solo lectura)
-    Route::get('/permisos', PermissionsIndex::class)->name('permissions.index');
+    Route::get('/permisos', PermissionsIndex::class)->middleware('can:usuarios.editar')->name('permissions.index');
 
     // Configuración
     Route::get('/configuracion/productos', ProductSettings::class)->name('configuration.products');
@@ -145,8 +144,6 @@ Route::middleware('auth')->group(function () {
     // Caja y cobro
     Route::get('/cajas/cierres', CajasCierres::class)->middleware('can:cajas.ver')->name('cajas.cierres');
     Route::get('/promociones-bancarias', PromocionesIndex::class)->middleware('can:promociones.gestionar')->name('promociones.index');
-    Route::get('/cajeros', CajerosIndex::class)->middleware('can:cajeros.gestionar')->name('cajeros.index');
-
     // Clientes y cuenta corriente
     Route::get('/clientes', ClientesIndex::class)->middleware('can:clientes.gestionar')->name('clientes.index');
     Route::get('/clientes/{cliente}', ClientesCuentaCorriente::class)->middleware('can:clientes.gestionar')->name('clientes.show');

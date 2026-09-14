@@ -2,45 +2,33 @@
 
 namespace App\Livewire\Users;
 
+use App\Livewire\Users\Concerns\DatosDeUsuario;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Rule;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
-use Spatie\Permission\Models\Role;
 
 class Edit extends Component
 {
+    use AuthorizesRequests, DatosDeUsuario;
+
+    #[Locked]
     public User $user;
-
-    #[Rule('required|string|max:255', message: [
-        'required' => 'El nombre es obligatorio.',
-        'max' => 'El nombre no puede exceder :max caracteres.',
-    ])]
-    public string $name = '';
-
-    public string $email = '';
-
-    public string $password = '';
-
-    #[Rule('required', message: [
-        'required' => 'Debes seleccionar un rol.',
-    ])]
-    public string $role = '';
-
-    #[Rule('boolean')]
-    public bool $active = true;
 
     /**
      * Inicializa el componente con los datos del usuario.
      */
     public function mount(int $userId): void
     {
-        $this->user = User::with('roles')->findOrFail($userId);
+        $this->authorize('usuarios.editar');
+
+        $this->user = User::with(['roles', 'sucursales'])->findOrFail($userId);
         $this->name = $this->user->name;
-        $this->email = $this->user->email;
+        $this->email = $this->user->email ?? '';
         $this->active = $this->user->active;
         $this->role = $this->user->roles->first()?->name ?? '';
+        $this->sucursales = $this->user->sucursales->pluck('id')->all();
     }
 
     /**
@@ -48,36 +36,9 @@ class Edit extends Component
      */
     public function update(): void
     {
-        $this->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $this->user->id,
-            'password' => 'nullable|min:8',
-            'role' => 'required',
-        ], [
-            'name.required' => 'El nombre es obligatorio.',
-            'name.max' => 'El nombre no puede exceder :max caracteres.',
-            'email.required' => 'El correo electrónico es obligatorio.',
-            'email.email' => 'Debes ingresar un correo electrónico válido.',
-            'email.unique' => 'Este correo electrónico ya está registrado.',
-            'password.min' => 'La contraseña debe tener al menos :min caracteres.',
-            'role.required' => 'Debes seleccionar un rol.',
-        ]);
+        $this->authorize('usuarios.editar');
 
-        $data = [
-            'name' => $this->name,
-            'email' => $this->email,
-            'active' => $this->active,
-        ];
-
-        // Solo actualizar contraseña si se proporcionó una nueva
-        if (!empty($this->password)) {
-            $data['password'] = Hash::make($this->password);
-        }
-
-        $this->user->update($data);
-
-        // Sincronizar rol
-        $this->user->syncRoles([$this->role]);
+        $this->guardarUsuario($this->user);
 
         session()->flash('success', 'Usuario actualizado correctamente.');
 
@@ -87,10 +48,9 @@ class Edit extends Component
     #[Layout('layouts.app')]
     public function render(): mixed
     {
-        $roles = Role::all();
-
         return view('livewire.users.edit', [
-            'roles' => $roles,
+            ...$this->datosDelFormulario(),
+            'tienePin' => (bool) $this->user->getRawOriginal('pin_hash'),
         ]);
     }
 }
