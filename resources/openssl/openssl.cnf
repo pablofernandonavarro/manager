@@ -1,0 +1,11 @@
+# Configuración mínima de OpenSSL para generar la clave y el CSR de AFIP.
+#
+# PHP en Windows (Herd, XAMPP) no trae un openssl.cnf en una ruta que OpenSSL encuentre
+# solo, y openssl_pkey_new() falla con "system library::No such process". Se pasa este
+# archivo explícitamente ('config' => ...) para no depender de cómo esté armada la máquina.
+
+[ req ]
+distinguished_name = req_distinguished_name
+string_mask = utf8only
+
+[ req_distinguished_name ]

@@ -8,10 +8,12 @@ use App\Http\Requests\Api\V1\SyncVentasRequest;
 use App\Http\Resources\Api\V1\PrecioSyncResource;
 use App\Http\Resources\Api\V1\ProductSyncResource;
 use App\Http\Resources\Api\V1\StockSyncResource;
+use App\Models\Cajero;
 use App\Models\DetallePrecio;
 use App\Models\DetalleVenta;
 use App\Models\MovimientoStock;
 use App\Models\Product;
+use App\Models\PromocionBancaria;
 use App\Models\StockSucursal;
 use App\Models\Venta;
 use Illuminate\Http\JsonResponse;
@@ -80,6 +82,81 @@ class SyncController extends Controller
     }
 
     /**
+     * Promociones bancarias que la sucursal del POS puede aplicar. La caja reemplaza su
+     * copia local con esta lista.
+     */
+    public function promociones(Request $request): JsonResponse
+    {
+        /** @var \App\Models\PuntoDeVenta $pdv */
+        $pdv = $request->user();
+
+        $promociones = PromocionBancaria::paraSucursal($pdv->sucursal_id)->orderBy('nombre')->get();
+
+        return response()->json([
+            'data' => $promociones->map(fn (PromocionBancaria $p) => [
+                'id' => $p->id,
+                'nombre' => $p->nombre,
+                'banco' => $p->banco,
+                'medios' => $p->medios,
+                'tarjetas' => $p->tarjetas,
+                'dias_semana' => $p->dias_semana,
+                'vigencia_desde' => $p->vigencia_desde?->toDateString(),
+                'vigencia_hasta' => $p->vigencia_hasta?->toDateString(),
+                'modalidad' => $p->modalidad,
+                'porcentaje' => (float) $p->porcentaje,
+                'tope' => $p->tope !== null ? (float) $p->tope : null,
+                'monto_minimo' => $p->monto_minimo !== null ? (float) $p->monto_minimo : null,
+                'cuotas_sin_interes' => $p->cuotas_sin_interes,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Cajeros habilitados en la sucursal del POS, con el PIN hasheado (bcrypt): la caja
+     * verifica el PIN localmente para poder abrir y autorizar sin conexión.
+     */
+    public function cajeros(Request $request): JsonResponse
+    {
+        /** @var \App\Models\PuntoDeVenta $pdv */
+        $pdv = $request->user();
+
+        return response()->json([
+            'data' => Cajero::paraSucursal($pdv->sucursal_id)->orderBy('nombre')->get()
+                ->map(fn (Cajero $c) => [
+                    'id' => $c->id,
+                    'nombre' => $c->nombre,
+                    'rol' => $c->rol,
+                    'pin_hash' => $c->pin_hash,
+                ])->values(),
+        ]);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $pagos
+     */
+    private function guardarPagos(Venta $venta, array $pagos): void
+    {
+        $promocionesExistentes = PromocionBancaria::whereIn('id', array_filter(array_column($pagos, 'promocion_id')))->pluck('id')->all();
+
+        foreach ($pagos as $pago) {
+            $promocionId = $pago['promocion_id'] ?? null;
+
+            $venta->pagos()->create([
+                'medio' => $pago['medio'],
+                'monto' => $pago['monto'],
+                'descuento' => $pago['descuento'] ?? 0,
+                'importe' => $pago['importe'],
+                'tarjeta' => $pago['tarjeta'] ?? null,
+                'banco' => $pago['banco'] ?? null,
+                'cuotas' => $pago['cuotas'] ?? null,
+                'promocion_bancaria_id' => in_array($promocionId, $promocionesExistentes, true) ? $promocionId : null,
+                'promocion_nombre' => $pago['promocion_nombre'] ?? null,
+                'referencia' => $pago['referencia'] ?? null,
+            ]);
+        }
+    }
+
+    /**
      * Sincroniza un batch de ventas desde el POS.
      */
     public function ventas(SyncVentasRequest $request): JsonResponse
@@ -88,20 +165,43 @@ class SyncController extends Controller
         $pdv = $request->user();
         $sincronizadoAt = now();
         $ventasCreadas = 0;
+        $resultados = [];
 
-        DB::transaction(function () use ($request, $pdv, $sincronizadoAt, &$ventasCreadas): void {
+        DB::transaction(function () use ($request, $pdv, $sincronizadoAt, &$ventasCreadas, &$resultados): void {
             foreach ($request->ventas as $ventaData) {
+                $existente = Venta::where('uuid', $ventaData['uuid'])->first();
+
+                if ($existente) {
+                    $resultados[] = [
+                        'uuid' => $ventaData['uuid'],
+                        'status' => 'duplicada',
+                        'venta_id' => $existente->id,
+                    ];
+
+                    continue;
+                }
+
                 $venta = Venta::create([
+                    'uuid' => $ventaData['uuid'],
                     'punto_de_venta_id' => $pdv->id,
                     'sucursal_id' => $pdv->sucursal_id,
                     'lista_precio_id' => $ventaData['lista_precio_id'] ?? null,
+                    'turno_uuid' => $ventaData['turno_uuid'] ?? null,
+                    'cajero' => $ventaData['cajero'] ?? null,
                     'numero_venta' => $ventaData['numero_venta'] ?? null,
                     'fecha' => $ventaData['fecha'],
                     'subtotal' => $ventaData['subtotal'],
                     'descuento' => $ventaData['descuento'] ?? 0,
+                    'descuento_manual' => $ventaData['descuento_manual'] ?? 0,
+                    'descuento_autorizado_por' => $ventaData['descuento_autorizado_por'] ?? null,
                     'total' => $ventaData['total'],
+                    'metodo_pago' => $ventaData['metodo_pago'] ?? null,
+                    'cliente_nombre' => $ventaData['cliente_nombre'] ?? null,
+                    'cliente_documento' => $ventaData['cliente_documento'] ?? null,
                     'sincronizado_at' => $sincronizadoAt,
                 ]);
+
+                $this->guardarPagos($venta, $ventaData['pagos'] ?? []);
 
                 $productIds = [];
 
@@ -125,10 +225,13 @@ class SyncController extends Controller
                         'sincronizado_at' => $sincronizadoAt,
                     ]);
 
-                    StockSucursal::updateOrCreate(
-                        ['sucursal_id' => $pdv->sucursal_id, 'product_id' => $item['product_id']],
-                        ['cantidad' => DB::raw('GREATEST(0, cantidad - '.abs((int) $item['cantidad']).')')],
-                    );
+                    $stockSucursal = StockSucursal::firstOrNew([
+                        'sucursal_id' => $pdv->sucursal_id,
+                        'product_id' => $item['product_id'],
+                    ]);
+
+                    $stockSucursal->cantidad = max(0, ($stockSucursal->cantidad ?? 0) - abs((int) $item['cantidad']));
+                    $stockSucursal->save();
 
                     $productIds[] = $item['product_id'];
                 }
@@ -140,12 +243,19 @@ class SyncController extends Controller
                 }
 
                 $ventasCreadas++;
+
+                $resultados[] = [
+                    'uuid' => $venta->uuid,
+                    'status' => 'creada',
+                    'venta_id' => $venta->id,
+                ];
             }
         });
 
         return response()->json([
             'message' => "Se sincronizaron {$ventasCreadas} venta(s) correctamente.",
             'sincronizado_at' => $sincronizadoAt->toIso8601String(),
+            'resultados' => $resultados,
         ]);
     }
 
@@ -158,10 +268,24 @@ class SyncController extends Controller
         $pdv = $request->user();
         $sincronizadoAt = now();
         $creados = 0;
+        $resultados = [];
 
-        DB::transaction(function () use ($request, $pdv, $sincronizadoAt, &$creados): void {
+        DB::transaction(function () use ($request, $pdv, $sincronizadoAt, &$creados, &$resultados): void {
             foreach ($request->movimientos as $mov) {
-                MovimientoStock::create([
+                $existente = MovimientoStock::where('uuid', $mov['uuid'])->first();
+
+                if ($existente) {
+                    $resultados[] = [
+                        'uuid' => $mov['uuid'],
+                        'status' => 'duplicado',
+                        'movimiento_id' => $existente->id,
+                    ];
+
+                    continue;
+                }
+
+                $movimiento = MovimientoStock::create([
+                    'uuid' => $mov['uuid'],
                     'punto_de_venta_id' => $pdv->id,
                     'sucursal_id' => $pdv->sucursal_id,
                     'product_id' => $mov['product_id'],
@@ -174,7 +298,7 @@ class SyncController extends Controller
 
                 $stockSucursal = StockSucursal::firstOrNew([
                     'sucursal_id' => $pdv->sucursal_id,
-                    'product_id' => $mov['product_id']
+                    'product_id' => $mov['product_id'],
                 ]);
 
                 $cantidadActual = $stockSucursal->cantidad ?? 0;
@@ -187,12 +311,19 @@ class SyncController extends Controller
                 Product::where('id', $mov['product_id'])->update(['stock' => $totalStock]);
 
                 $creados++;
+
+                $resultados[] = [
+                    'uuid' => $movimiento->uuid,
+                    'status' => 'creado',
+                    'movimiento_id' => $movimiento->id,
+                ];
             }
         });
 
         return response()->json([
             'message' => "Se sincronizaron {$creados} movimiento(s) correctamente.",
             'sincronizado_at' => $sincronizadoAt->toIso8601String(),
+            'resultados' => $resultados,
         ]);
     }
 

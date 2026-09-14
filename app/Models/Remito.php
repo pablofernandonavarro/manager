@@ -17,6 +17,8 @@ class Remito extends Model
         'observaciones',
         'remitido_at',
         'confirmado_at',
+        'confirmado_por_user_id',
+        'confirmado_por_punto_de_venta_id',
     ];
 
     protected function casts(): array
@@ -41,6 +43,16 @@ class Remito extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function confirmadoPorUsuario(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmado_por_user_id');
+    }
+
+    public function confirmadoPorCaja(): BelongsTo
+    {
+        return $this->belongsTo(PuntoDeVenta::class, 'confirmado_por_punto_de_venta_id');
     }
 
     public function detalles(): HasMany

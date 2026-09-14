@@ -65,7 +65,7 @@
                         </svg>
                     </button>
                     <div x-show="productosOpen" @if(!$productosOpen) style="display:none" @endif class="mt-1 ml-4 space-y-1">
-                        <a href="/productos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos') || request()->is('productos/crear') || request()->is('productos/*/editar') || (request()->is('productos/*') && !request()->is('productos/precios')) ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        <a href="/productos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos') || request()->is('productos/crear') || request()->is('productos/*/editar') || (request()->is('productos/*') && !request()->is('productos/precios') && !request()->is('productos/stock')) ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                             <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                             </svg>
@@ -77,6 +77,12 @@
                             </svg>
                             Ver listas de precio
                         </a>
+                        <a href="/productos/stock" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos/stock') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                            <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                            Stock
+                        </a>
                     </div>
                 </div>
 
@@ -87,6 +93,56 @@
                     </svg>
                     Ventas
                 </a>
+
+                @can('facturacion.configurar')
+                <a href="/facturacion/configuracion"
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('facturacion*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Facturación AFIP
+                </a>
+                @endcan
+
+                @can('reportes.ver')
+                <a href="/reportes/ventas"
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('reportes*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Reportes
+                </a>
+                @endcan
+
+                @can('cajas.ver')
+                <a href="/cajas/cierres"
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('cajas*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    Cierres de caja
+                </a>
+                @endcan
+
+                @can('cajeros.gestionar')
+                <a href="/cajeros"
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('cajeros*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    Cajeros
+                </a>
+                @endcan
+
+                @can('promociones.gestionar')
+                <a href="/promociones-bancarias"
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('promociones-bancarias*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    Promociones bancarias
+                </a>
+                @endcan
 
                 <!-- Configuración con submenú -->
                 @php
@@ -264,12 +320,14 @@
                                     </svg>
                                     Stock
                                 </a>
+                                @can('remitos.ver')
                                 <a href="/sucursales/remitos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/remitos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                                     <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                                     </svg>
                                     Remitos
                                 </a>
+                                @endcan
                             </div>
                         </div>
                         <a href="/puntos-de-venta" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('puntos-de-venta*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
@@ -322,6 +380,70 @@
                 {{ $slot ?? '' }}
                 @yield('content')
             </main>
+        </div>
+    </div>
+
+    <!-- Modal: Código de instalación del POS -->
+    <div x-data="{
+             show: false,
+             codigo: '',
+             nombre: '',
+             expira: ''
+         }"
+         @codigo-instalacion-generado.window="show = true; codigo = $event.detail.codigo; nombre = $event.detail.nombre; expira = $event.detail.expira"
+         style="display:none"
+         :style="show ? 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center' : 'display:none'">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full mx-4" style="max-width:32rem" @click.stop>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Código para "<span x-text="nombre"></span>"</h3>
+                    <p class="text-xs text-gray-500">Vence el <span x-text="expira"></span> · un solo uso</p>
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-600 mb-3">
+                El Manager <strong>no instala el POS a distancia</strong>. Este código vincula una máquina
+                con este punto de venta; la instalación se hace <strong>en esa máquina</strong>, una sola vez.
+            </p>
+
+            <div class="bg-blue-50 border-2 border-blue-200 rounded-lg py-5 mb-4 text-center">
+                <div class="text-3xl font-bold font-mono tracking-widest text-blue-900" x-text="codigo"></div>
+            </div>
+
+            <p class="text-sm font-medium text-gray-900 mb-1.5">Qué hacer ahora, en la PC de la caja:</p>
+            <ol class="text-sm text-gray-700 space-y-1.5 mb-5 list-decimal list-inside">
+                <li>Ejecutá <code class="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">instalar-pos.bat</code></li>
+                <li>Cuando lo pida, escribí este código</li>
+                <li>El POS se configura solo y baja el catálogo</li>
+            </ol>
+
+            <p class="text-xs text-gray-500 mb-3">
+                Si esa caja ya está instalada y solo hay que revincularla, alcanza con
+                <code class="px-1 py-0.5 bg-gray-100 rounded font-mono">php artisan pos:provision</code>.
+                Cuando se use, la fila va a figurar como <strong>Instalada</strong>.
+            </p>
+
+            <p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-4">
+                Al usarse, el secret anterior de esta caja deja de funcionar. Si es una reinstalación,
+                la máquina vieja va a dejar de sincronizar.
+            </p>
+
+            <div class="flex gap-2 justify-end">
+                <button type="button"
+                        @click="navigator.clipboard.writeText(codigo); var b=$el; b.textContent='✓ Copiado'; setTimeout(()=>b.textContent='Copiar',1500)"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors">
+                    Copiar
+                </button>
+                <button type="button" @click="show = false"
+                        class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
 

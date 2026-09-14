@@ -3,11 +3,13 @@
 namespace App\Livewire\Sucursales;
 
 use App\Enums\EstadoRemito;
+use App\Exceptions\RemitoException;
 use App\Models\Product;
-use App\Models\Remito;
 use App\Models\RemitoDetalle;
 use App\Models\StockSucursal;
 use App\Models\Sucursal;
+use App\Services\RemitoService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -15,6 +17,7 @@ use Livewire\WithPagination;
 
 class Stock extends Component
 {
+    use AuthorizesRequests;
     use WithPagination;
 
     public ?int $sucursalSeleccionada = null;
@@ -67,11 +70,21 @@ class Stock extends Component
         $this->detalleProductoNombre = null;
     }
 
-    public function abrirRemito(int $productId, string $nombre, int $stockDisponible): void
+    /**
+     * Nombre y disponible se leen de la base: antes llegaban como parámetros desde el
+     * navegador y el control de stock se hacía contra ese número, que se puede alterar.
+     */
+    public function abrirRemito(int $productId): void
     {
-        $this->remitoProductoId = $productId;
-        $this->remitoProductoNombre = $nombre;
-        $this->remitoStockDisponible = $stockDisponible;
+        $this->authorize('remitos.crear');
+
+        $producto = Product::findOrFail($productId);
+
+        $this->remitoProductoId = $producto->id;
+        $this->remitoProductoNombre = $producto->nombre;
+        $this->remitoStockDisponible = (int) StockSucursal::where('sucursal_id', $this->sucursalSeleccionada)
+            ->where('product_id', $producto->id)
+            ->value('cantidad');
         $this->remitoCantidades = [];
         $this->remitoError = null;
     }
@@ -85,13 +98,19 @@ class Stock extends Component
         $this->remitoError = null;
     }
 
-    public function confirmarRemito(): void
+    /**
+     * Envío rápido de un artículo a una o varias sucursales: un remito por destino. Para
+     * varios artículos juntos está la pantalla Nuevo remito.
+     */
+    public function confirmarRemito(RemitoService $remitos): void
     {
+        $this->authorize('remitos.crear');
+
         $this->remitoError = null;
 
         $cantidades = collect($this->remitoCantidades)
-            ->filter(fn ($v) => (int) $v > 0)
-            ->map(fn ($v) => (int) $v);
+            ->map(fn ($v) => (int) $v)
+            ->filter(fn (int $v) => $v > 0);
 
         if ($cantidades->isEmpty()) {
             $this->remitoError = 'Ingresá al menos una cantidad mayor a 0.';
@@ -99,41 +118,22 @@ class Stock extends Component
             return;
         }
 
-        $totalAEnviar = $cantidades->sum();
-
-        if ($totalAEnviar > $this->remitoStockDisponible) {
-            $this->remitoError = "Total a enviar ({$totalAEnviar}) supera el stock disponible en Central ({$this->remitoStockDisponible}).";
+        try {
+            // Todo o nada: si el segundo destino no entra, no queda creado el primero.
+            $creados = DB::transaction(fn () => $cantidades->map(fn (int $cantidad, int $destinoId) => $remitos->crear(
+                $this->sucursalSeleccionada,
+                $destinoId,
+                [$this->remitoProductoId => $cantidad],
+                auth()->user()
+            )));
+        } catch (RemitoException $e) {
+            $this->remitoError = $e->getMessage();
 
             return;
         }
 
-        $centralId = $this->sucursalSeleccionada;
-
-        DB::transaction(function () use ($cantidades, $totalAEnviar, $centralId) {
-            // Descontar de Central
-            StockSucursal::where('sucursal_id', $centralId)
-                ->where('product_id', $this->remitoProductoId)
-                ->decrement('cantidad', $totalAEnviar);
-
-            // Crear un remito por cada sucursal destino con cantidad > 0
-            foreach ($cantidades as $sucursalDestinoId => $cantidad) {
-                $remito = Remito::create([
-                    'sucursal_origen_id' => $centralId,
-                    'sucursal_destino_id' => $sucursalDestinoId,
-                    'user_id' => auth()->id(),
-                    'estado' => EstadoRemito::Remitido,
-                    'remitido_at' => now(),
-                ]);
-
-                $remito->detalles()->create([
-                    'product_id' => $this->remitoProductoId,
-                    'cantidad' => $cantidad,
-                ]);
-            }
-        });
-
         $this->cerrarRemito();
-        session()->flash('success', 'Remito(s) creado(s) correctamente. La sucursal debe confirmar la recepción.');
+        session()->flash('success', $creados->count().' remito(s) creado(s). Cada destino tiene que confirmar la recepción.');
     }
 
     #[Layout('layouts.app')]
@@ -147,9 +147,9 @@ class Stock extends Component
         $sucursalActual = $sucursales->firstWhere('id', $this->sucursalSeleccionada);
         $esCentral = $sucursalActual?->isCentral() ?? false;
 
-        $sucursalesDestino = $esCentral
-            ? $sucursales->where('is_central', false)->values()
-            : collect();
+        // Se puede enviar desde cualquier sucursal a cualquier otra, Central incluida.
+        $puedeEnviar = auth()->user()->can('remitos.crear');
+        $sucursalesDestino = $sucursales->where('id', '!=', $this->sucursalSeleccionada)->values();
 
         $query = Product::query()
             ->select('products.*')
@@ -220,6 +220,8 @@ class Stock extends Component
             'sucursales' => $sucursales,
             'sucursalesDestino' => $sucursalesDestino,
             'esCentral' => $esCentral,
+            'puedeEnviar' => $puedeEnviar,
+            'sucursalActual' => $sucursalActual,
             'productos' => $productos,
             'stockTotal' => $stockTotal,
             'productosConStock' => $productosConStock,

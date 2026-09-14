@@ -18,6 +18,7 @@ class SyncMovimientosRequest extends FormRequest
     {
         return [
             'movimientos' => 'required|array|min:1',
+            'movimientos.*.uuid' => 'required|uuid',
             'movimientos.*.product_id' => 'required|integer|exists:products,id',
             'movimientos.*.tipo' => ['required', new Enum(TipoMovimiento::class)],
             'movimientos.*.cantidad' => 'required|integer',

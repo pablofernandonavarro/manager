@@ -19,6 +19,7 @@ class Sucursal extends Model
         'telefono',
         'activo',
         'is_central',
+        'afip_punto_venta',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class Sucursal extends Model
         return [
             'activo' => 'boolean',
             'is_central' => 'boolean',
+            'afip_punto_venta' => 'integer',
         ];
     }
 

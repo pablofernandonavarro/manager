@@ -270,3 +270,171 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - IMPORTANT: Activate `tailwindcss-development` every time you're working with a Tailwind CSS or styling-related task.
 
 </laravel-boost-guidelines>
+
+## Entorno local real (tiene prioridad sobre las "sail rules" de arriba)
+
+Las reglas generadas por Boost dicen ejecutar todo con `vendor/bin/sail`. **En esta máquina no es así.** El setup acordado es híbrido:
+
+- La app se sirve con **Laravel Herd** en `http://manager.test`. Los contenedores `laravel.test` y `mailpit` están apagados a propósito: el de la app competía por el puerto 80 con Herd.
+- Solo corre el contenedor de **MySQL**, publicado en el host en `127.0.0.1:3307` (no `mysql:3306`, que solo resuelve dentro de la red de Docker). El `.env` apunta ahí.
+- Levantarlo: `docker compose up -d mysql` desde `C:\MisLaravel\manager`.
+- **Los comandos van desde Windows, no por Sail**, y con PHP 8.4 — el `php` del PATH es 8.2 y `vendor/composer/platform_check.php` aborta porque el proyecto requiere >= 8.4:
+
+```powershell
+& "$env:USERPROFILE\.config\herd\bin\php84.bat" artisan migrate
+& "$env:USERPROFILE\.config\herd\bin\php84.bat" artisan test --filter=NombreDelTest
+```
+
+Si aparece `getaddrinfo for mysql failed`, es que el `.env` volvió a tener `DB_HOST=mysql`, o que quedó config cacheada: `php84 artisan config:clear`.
+
+### Assets: recompilar al agregar clases de Tailwind
+
+Tailwind v4 genera CSS solo para las clases que encuentra escaneando los archivos. **Una clase nueva en un Blade no existe hasta correr el build**, y el síntoma es confuso: el elemento se renderiza sin estilo (un modal a todo el ancho, un color que no aparece) sin ningún error.
+
+```powershell
+npm ci          # solo la primera vez en Windows: node_modules venía instalado desde el contenedor, sin los binarios de Windows
+npm run build
+```
+
+Para diagnosticar si una clase falta: `Select-String -Path "public\build\assets\*.css" -Pattern "max-w-5xl"`.
+
+## Instalación de cajas (código de instalación)
+
+Un usuario del Manager da de alta el POS y aprieta **Código** en `Puntos de venta`: se genera un código corto de un solo uso (`ABCD-1234`, vence a las 24h) que el técnico tipea en la máquina destino, donde `php artisan pos:provision <codigo>` lo canjea contra `POST /api/v1/pos/provision`.
+
+El botón se llama "Código" y no "Instalar" a propósito: el Manager **no instala nada a distancia**, y nombrarlo así hacía que se esperara una instalación remota que no ocurre. El modal lo dice explícitamente y la columna **Instalación** de la tabla cierra el lazo — `Sin instalar` / `Código sin usar` / `Instalada <fecha>`, calculado con `withMax('codigosInstalacion as instalado_at', 'usado_at')` y un conteo de códigos vigentes. Sin esa columna no hay forma de saber desde el Manager en qué estado quedó cada terminal.
+
+Decisiones que no conviene deshacer:
+
+- **El secret no se guarda en ningún lado.** Se genera recién al canjear el código y se entrega una sola vez. Por eso una reinstalación rota la credencial sola, y por eso el canje además borra los tokens Sanctum del PDV: si la máquina vieja se perdió o se rompió, deja de poder sincronizar.
+- El endpoint **no lleva auth** — el código *es* la credencial. De ahí que sea de un solo uso, venza, se resuelva bajo `lockForUpdate()` y tenga `throttle:10,1`.
+- Generar un código nuevo vence los anteriores del mismo PDV, para que no queden códigos viejos sirviendo.
+- El alfabeto del código excluye `0/O/1/I/L` porque se dicta por teléfono. `CodigoInstalacion::normalizar()` acepta que lo tipeen sin guion y en minúsculas.
+
+Cubierto por `tests/Feature/PosProvisionTest.php`.
+
+**Ojo del lado POS**: `ManagerApiService` lee url y token de la tabla `configuracion` *en su constructor*. En `ProvisionCommand` los servicios no se inyectan, se resuelven con `app()->make()` después de escribir esos valores — inyectarlos da una instancia con las credenciales viejas y la sincronización inicial falla con un error de conexión engañoso (el `retry()` de Http convierte el 401 en excepción).
+
+## Versión instalada y conexión de cada caja
+
+Cada llamada autenticada de una caja trae `X-POS-Version` y `X-POS-Tipo` (`escritorio`/`clasica`). El middleware `RegistrarConexionPos` (en el grupo `auth:sanctum` de `api/v1`) los guarda en `puntos_de_venta.version_pos`, `tipo_instalacion` y `ultima_conexion_at`. Escribe solo si cambió algo o pasó más de un minuto, porque las cajas llaman varias veces por minuto. Los valores se validan (versión `[\w.-]`, tipo de lista cerrada): vienen de afuera y se muestran en pantalla. `Puntos de venta` compara contra la última publicada según el tipo (`pos-escritorio.json` o `VersionPos::vigente()`) y muestra "En línea" si habló en los últimos 3 minutos. Cubierto por `tests/Feature/PosVersionInstaladaTest.php`.
+
+## Caja, cobro y promociones bancarias
+
+- **Promociones bancarias** (`PromocionBancaria`, pantalla `Promociones\Index`, permiso `promociones.gestionar`): medio(s), tarjetas, banco, días, vigencia, sucursales (`null` = todas en las listas JSON), `modalidad` descuento en caja o reintegro del banco, porcentaje con tope, mínimo y cuotas sin interés. Bajan a las cajas por `GET api/v1/sync/promociones` (`paraSucursal()`: activas, no vencidas, de la sucursal). La caja las aplica y **recalcula el descuento ella misma**; el Manager guarda lo que la caja informa.
+- **Ventas con pagos**: `sync/ventas` acepta `turno_uuid`, `cajero`, `metodo_pago`, cliente y `pagos[]` (`PagoVenta`: `monto` cubierto, `descuento`, `importe` cobrado, tarjeta, banco, cuotas, promoción). Todo opcional para que las cajas viejas sigan entrando. `promocion_id` **no** usa `exists`: una promo borrada mientras la caja estaba offline dejaría la venta rechazada para siempre; se vincula solo si existe y se conserva `promocion_nombre`.
+- **Turnos de caja** (`TurnoCaja`, `MovimientoCaja`): llegan por `POST api/v1/sync/turnos` (`PosTurnosController`), idempotente por uuid. El abierto se actualiza en cada envío; **el cerrado es inmutable** (reenvío → `duplicado`). Un uuid de otra caja → `rechazado`. `numero` no es único por caja (una reinstalación vuelve a numerar). Ventas y turnos se vinculan por `turno_uuid`, sin FK, porque llegan en envíos separados. Pantalla `Cajas\Cierres` (permiso `cajas.ver`, admin y supervisor) con filtros y el Z completo.
+- **Cajeros** (`Cajero`, pantalla `Cajeros\Index`, permiso `cajeros.gestionar`): nombre, rol `cajero`/`supervisor`, sucursales (`null` = todas), PIN de 4 a 6 dígitos guardado con `Hash::make` (al editar, vacío = no cambiar). `GET api/v1/sync/cajeros` manda solo `id, nombre, rol, pin_hash` de los activos de la sucursal: la caja verifica el PIN offline. No son usuarios del Manager.
+- **Devoluciones** (`Devolucion`, `DevolucionItem`): `POST api/v1/sync/devoluciones` (`PosDevolucionesController`), idempotente por uuid, vinculada a la venta por `venta_uuid`. **No toca stock**: la mercadería devuelta llega como `movimientos_stock` tipo `devolucion`. Las ventas guardan `descuento_manual` y `descuento_autorizado_por`. El Z (`resumen`) trae bloque `devoluciones` y `ventas.neto`.
+- En tests de API con varias cajas, llamar `$this->app['auth']->forgetGuards()` entre requests: el guard queda con el usuario del request anterior y dos cajas parecen la misma. Cubierto por `PosCajaSyncTest` y `PromocionesYCierresTest`.
+
+## Facturación electrónica (AFIP) — configuración
+
+Centralizada en el Manager: **un emisor** (`ConfiguracionFiscal`, fila única id 1, `actual()`) con su certificado, y **un punto de venta de AFIP por sucursal** (`sucursales.afip_punto_venta`, único). Las cajas le van a pedir el CAE al Manager (la emisión todavía no está implementada). Pantalla `Facturacion\Configuracion` (`/facturacion/configuracion`, permiso `facturacion.configurar`, solo admin).
+
+- **Certificado**: `Services\Afip\Certificados` genera clave RSA 2048 y CSR con `serialNumber = "CUIT nnnnnnnnnnn"` (lo exige AFIP) y lee/valida el `.crt` (corresponde a la clave, es del CUIT configurado, no está vencido; detecta homologación por emisor "Computadores Test"). **Siempre pasar `'config' => Certificados::opensslCnf()`** (`resources/openssl/openssl.cnf`): en Windows `openssl_pkey_new` falla sin un cnf ("system library::No such process").
+- **Cifrado**: `clave_privada`, `certificado`, `ta_token`, `ta_sign` con cast `encrypted` (APP_KEY). Cambiar la APP_KEY obliga a volver a cargar el certificado.
+- **WSAA** (`Services\Afip\Wsaa`): firma el TRA con `openssl_cms_sign` en DER y lo manda por `Http` (sin ext-soap ni WSDL). **El ticket se guarda y se reusa**: AFIP rechaza un login nuevo mientras hay uno vigente (`coe.alreadyAuthenticated`). Cambiar CUIT o entorno lo invalida y desactiva la facturación. Los errores de AFIP vienen con el código en `faultcode` (`Soap::fault()` devuelve `código: texto`).
+- **WSFEv1** (`Services\Afip\Wsfe`): `dummy()`, `ultimoAutorizado()`, `puntosDeVenta()` (602 = sin resultados, normal en homologación). "Probar conexión" corre esos pasos en orden y corta al primero que falla; no se puede activar la facturación sin faltantes ni sin una prueba OK.
+- Tests (`FacturacionConfiguracionTest`) usan un certificado autofirmado con la misma clave y respuestas SOAP con `Http::fake` + `Http::preventStrayRequests()`: nunca pegan a AFIP.
+- `ConfiguracionFiscal::actual()` fuerza `id = 1` con `forceFill`: `firstOrCreate(['id' => 1])` ignoraba el id (no fillable) y creaba filas nuevas.
+
+## Reportes de ventas
+
+`App\Services\ReporteVentasService` (pantalla `Reportes\Ventas`, exportación `ExportarVentasController`, permiso `reportes.ver` para admin y supervisor): indicadores (bruto, descuentos, manuales, cobrado, devoluciones, neto, ticket promedio, unidades), por medio de pago, por cajero, por sucursal/caja, por día, tarjetas/QR para conciliar y promociones.
+
+- **Todo se guarda en UTC; los filtros son días locales** (`config('app.display_timezone')`, por defecto Argentina). `rangoUtc()` convierte el día local a un rango UTC: sin eso una venta de las 23:30 caía en el día siguiente (hay test). `porDia()` agrupa en PHP y no con `CONVERT_TZ` porque MySQL necesita las tablas de zonas cargadas.
+- Ventas de cajas anteriores a 1.1 no tienen `pagos_venta`: aparecen como medio `sin_detalle` para que la suma por medio cierre contra el total.
+- Las devoluciones cuentan por **su** fecha, y el filtro por cajero usa el cajero de la venta original.
+- CSV con `;`, coma decimal y BOM UTF-8 para que Excel en español lo abra bien; se genera con `chunk(500)`.
+
+## Remitos (transferencias entre sucursales)
+
+**Todo movimiento de stock por remito pasa por `App\Services\RemitoService`** (`crear`, `confirmar`, `cancelar`); las pantallas (`Sucursales\RemitoNuevo`, el envío rápido de `Sucursales\Stock` y `Sucursales\Remitos`) no tocan `stock_sucursal` directamente. Cualquier sucursal activa puede ser origen o destino, Central incluida. Crear descuenta del origen (queda en tránsito, no suma en ninguna sucursal), confirmar acredita en el destino, cancelar devuelve al origen; cada paso registra un `MovimientoStock` tipo `transferencia` sin punto de venta (por eso `punto_de_venta_id` es nullable) con referencia `Remito #000123`, y recalcula `products.stock` como suma de `stock_sucursal`.
+
+- El disponible se lee dentro de la transacción con `lockForUpdate`, **nunca** del valor que manda la pantalla: antes el control de stock se hacía contra un parámetro del navegador y se podía dejar Central en negativo.
+- `confirmar`/`cancelar` bloquean la fila del remito y releen el estado: un doble clic no acredita dos veces.
+- Errores de negocio salen como `App\Exceptions\RemitoException`, con mensaje apto para mostrar.
+- Permisos: `remitos.ver`, `remitos.crear`, `remitos.recibir`, `remitos.cancelar` (admin todos; supervisor ver y recibir). Cubierto por `tests/Feature/RemitosTest.php`.
+- **Recepción desde la caja**: `GET api/v1/pos/remitos` (en tránsito hacia la sucursal del PDV autenticado) y `POST api/v1/pos/remitos/{id}/recibir` (`PosRemitosController`). Recibir es **idempotente**: si ya estaba confirmado responde 200 `ya_recibido` con el stock actual, para que la caja pueda reintentar tras un corte; cancelado → 409; de otra sucursal → 404. Devuelve `stock[]` de la sucursal para esos productos. Quién recibió queda en `confirmado_por_user_id` / `confirmado_por_punto_de_venta_id`. Cubierto por `tests/Feature/PosRemitosTest.php`.
+
+## Instalador descargable
+
+### App de escritorio (camino principal)
+
+El POS se reparte como app de escritorio NativePHP, compilada en `C:\MisLaravel\pos-native` (`php artisan native:build win x64`, con el bin de Herd primero en el PATH). `php artisan pos:publicar-escritorio <carpeta win-unpacked | Setup.exe>` la deja en `storage/app/private/pos-escritorio/` (zip con carpeta raíz `POS-Escritorio` —no `POS`, que es la de la instalación clásica—, o el `.exe`, más `pos-escritorio.json` con versión y sha256). Se baja desde `Puntos de venta` → **Descargar POS de escritorio**, ruta `pdv.instalador-escritorio`, con `can:terminales.instalar`. El comando rechaza la carpeta si trae `.sqlite` o `.pos-info`: en la app de escritorio los datos viven en `%APPDATA%\pos-system`, así que una compilación sana nunca los lleva.
+
+En la caja no hay consola: al abrir el exe sin configurar, el middleware `RequiereCajaConfigurada` manda a `/configuracion`, que pide dirección del Manager + código (`ProvisionService`, el mismo que usa `pos:provision`). Al instalar, `EscritorioService` activa el inicio con Windows (`App::openAtLogin`) y crea el acceso directo. Versión nueva = reemplazar la carpeta; la orden **Actualizar** (`pos:actualizar`) no sirve dentro del exe. Hoy sale zip y no Setup porque NSIS falla creando symlinks sin Modo de desarrollador de Windows.
+
+### Kit clásico (PHP + navegador)
+
+`php artisan pos:kit C:\ruta\a\un\pos` arma el instalador completo (código + `vendor` + `node_modules`, ~48 MB comprimido, ~2 minutos) en `storage/app/private/pos-kit/`. El admin lo baja desde `Puntos de venta` → **Descargar instalador**, ruta `pdv.instalador`, protegida con `can:terminales.instalar` porque el kit lleva el código completo del POS.
+
+**El comando excluye todo lo que identifica a la caja de origen** — `.env`, `.pos-info`, `database.sqlite`, logs, respaldos, `iniciar-*.bat`. Sin eso, la máquina que instale el kit arrancaría creyendo que *es* esa caja y sincronizaría con su token: dos terminales con la misma identidad mandando ventas.
+
+Hay también `preparar-kit.bat` del lado POS, que hace lo mismo pero como carpeta en disco (para pendrive, sin pasar por el Manager).
+
+## Permisos sobre terminales
+
+Tres permisos (creados por migración, no por seeder, para que apliquen en instalaciones existentes):
+
+| Permiso | Quién | Qué habilita |
+|---|---|---|
+| `terminales.ver` | admin, supervisor | Entrar a `Puntos de venta` |
+| `terminales.instalar` | admin | Crear/eliminar cajas, generar códigos, regenerar secret y tokens |
+| `terminales.comandos` | admin | Mandar órdenes, incluida *Actualizar* |
+
+**Los `authorize()` van en cada método del componente Livewire, no solo escondiendo botones.** Cada método público es un endpoint que un usuario autenticado puede invocar con un request armado a mano; ocultar el botón no protege nada. Esconder los botones es comodidad, no seguridad.
+
+Al testear esto: **Livewire convierte `AuthorizationException` en un 403, no la propaga**. Se verifica con `->assertForbidden()`, y además comprobando que la acción no haya tenido efecto. Cubierto por `tests/Feature/PermisosTerminalesTest.php`.
+
+## Pendiente para producción
+
+Lo hecho: permisos, `throttle:10,1` en `pos/auth` (antes se podía probar el secret por fuerza bruta), `.env.example` del POS con `APP_DEBUG=false`, y la contraseña del admin fuera del repositorio (`AdminUserSeeder` toma `ADMIN_PASSWORD` o genera una al azar y la muestra una sola vez).
+
+Lo que falta y es bloqueante:
+
+- **HTTPS.** Hoy el secret de cada caja, el token bearer y los códigos de instalación viajan en texto plano. En la red de un local, eso alcanza para quedarse con una terminal.
+- **`APP_ENV`/`APP_DEBUG` de estas instalaciones.** Los `.env` locales siguen en modo desarrollo a propósito; hay que endurecerlos al desplegar de verdad.
+- Manager en un servidor real con backup de la base (hoy Herd + MySQL en Docker de una máquina de escritorio).
+- `C:\MisLaravel\pos` es a la vez el código fuente y la instalación de Caja 1. Conviene separarlos: empaquetar captura el estado en que esté esa carpeta.
+
+## Canal de órdenes (reparar una caja a distancia)
+
+Botón **Reparar** en `Puntos de venta`: encola una orden en `comandos_pos` que la caja recoge en su próxima consulta (`pos:comandos`, cada minuto) y ejecuta sola. Permite arreglar una terminal sin ir físicamente, mientras siga encendida y con el POS instalado.
+
+- **`App\Enums\ComandoPos` es la frontera de seguridad.** Se manda un identificador de una lista cerrada, nunca texto que la caja pueda interpretar como shell. Del lado POS, `ComandosCommand::ejecutar()` lo traduce con un `match` que **lanza excepción ante un valor desconocido**. No agregar un comando "genérico" que reciba parámetros libres: eso convertiría al Manager en ejecución remota arbitraria sobre todas las terminales.
+- Las órdenes se marcan **tomadas al entregarlas**, así que no vuelven a salir solas si la caja se cuelga a mitad. Queda visible como colgada en el Manager, que es preferible a reejecutar algo que quizás ya corrió.
+- `ComandoPos::encolar()` no duplica: si ya hay una igual sin ejecutar, devuelve esa.
+- El reporte de resultado está acotado al PDV autenticado — una caja no puede cerrar órdenes de otra.
+
+Cubierto por `tests/Feature/PosComandosTest.php`.
+
+`recrear_acceso_directo` es el único que ejecuta algo fuera de PHP. No rompe el modelo de seguridad porque la ruta del script es fija y dentro de la propia instalación, y los argumentos van en un array de `Process` (no pasa por shell, no hay concatenación). Del Manager solo viaja la etiqueta.
+
+## Actualizar el código de las cajas
+
+`php artisan pos:empaquetar C:\ruta\al\pos --notas="..."` arma un zip, guarda su sha256 en `versiones_pos` y lo marca vigente. La orden **Actualizar el POS** hace que la caja lo baje (`GET /api/v1/pos/version` y `/pos/paquete`), verifique el hash, respalde lo que va a pisar, aplique y migre. Si algo falla, restaura el respaldo sola.
+
+- El paquete **incluye `public/build` ya compilado**: la caja no necesita Node para actualizarse, y se evita el problema de assets viejos que ya mordió dos veces.
+- Incluye los `*.bat`/`*.ps1`/`*.vbs` de la raíz. Sin eso los scripts quedan congelados en la versión con la que se instaló la caja.
+- **Nunca** viajan `.env`, `database.sqlite`, `storage/`, `vendor/` ni `node_modules/` — ni en el paquete ni al aplicar (lista `INTOCABLE` en `ActualizarCommand`).
+- La opción del comando es `--etiqueta`, no `--version`: Artisan ya reserva ese nombre.
+- **Bootstrapping**: una caja no puede actualizarse si todavía no tiene `ActualizarCommand`. La primera vez hay que copiar ese archivo (y `ManagerApiService`) a mano; de ahí en adelante es automático.
+- **Un paquete con el actualizador roto rompe las actualizaciones futuras.** Pasó de verdad: se publicó una versión cuyo `ActualizarCommand` tenía un bug, las cajas se lo aplicaron encima del bueno y quedaron sin poder actualizarse solas. El rollback las dejó sanas pero hubo que copiar el archivo a mano. **Antes de publicar, probar el paquete en una caja de prueba** — es el único componente que, si sale mal, no se puede arreglar a distancia.
+- Los respaldos rotan solos: se conservan los últimos 3 (`rotarRespaldos()`). Sin eso cada actualización dejaba ~700 KB para siempre en el disco de la caja.
+
+Dos cosas que costaron encontrar y conviene no reintroducir:
+
+- **`sink()` con una ruta deja el archivo tomado por PHP**, y después PowerShell no puede descomprimirlo ("está siendo utilizado en otro proceso"). Por eso `descargarPaquete()` abre el handle con `fopen` y lo cierra explícitamente.
+- **`Expand-Archive` sale con código 0 aunque falle** (error no terminante), así que el exit code no sirve para saber si anduvo. Lo que confirma el éxito es que exista el `VERSION` en el staging.
+
+Se extrae con PowerShell y no con `ZipArchive` porque el PHP de las cajas (XAMPP 8.2) viene **sin la extensión zip cargada**; depender de ella obligaría a editar el `php.ini` de cada máquina.
+
+## Contrato de sync con el POS
+
+El POS vive en `C:\MisLaravel\pos` (Laravel + Livewire + SQLite, offline-first). `SyncController` es la única puerta de entrada. Cada venta y movimiento que llega trae un `uuid` generado en la caja, con índice único en `ventas` y `movimientos_stock`: si el uuid ya existe se descarta y se responde `duplicada`/`duplicado` en `resultados[]`, en vez de volver a insertar. Esto es lo que hace seguro el `retry()` del cliente, así que **no saques la validación `required|uuid` ni el chequeo previo a insertar**, y cualquier cambio al payload hay que hacerlo en los dos repos a la vez. Cubierto por `tests/Feature/SyncIdempotenciaTest.php`.
+
+`/sync/ventas` ya genera él mismo el `MovimientoStock` de la venta y descuenta `stock_sucursal`; por eso el POS filtra los movimientos tipo `venta` y no los reenvía por `/sync/movimientos`. Mandarlos por ambos lados descuenta el stock dos veces.
+
+Al tocar `stock_sucursal.cantidad` no uses `DB::raw()` dentro de `updateOrCreate()`: el modelo castea `cantidad` a `integer` y un `Query\Expression` revienta con "could not be converted to int" (era un 500 fijo en `/sync/ventas`). Usá `firstOrNew()` + `max(0, ...)`.

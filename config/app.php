@@ -67,6 +67,10 @@ return [
 
     'timezone' => 'UTC',
 
+    // Todo se guarda en UTC; esta es la zona para mostrar fechas y para interpretar
+    // filtros "por día" (un día de ventas en Argentina no coincide con el día UTC).
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'America/Argentina/Buenos_Aires'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

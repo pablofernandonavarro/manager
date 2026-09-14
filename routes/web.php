@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\ExportarVentasController;
 use App\Livewire\Auth\ForgotPassword;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\ResetPassword;
+use App\Livewire\Cajas\Cierres as CajasCierres;
+use App\Livewire\Cajeros\Index as CajerosIndex;
 use App\Livewire\Configuration\Grupos;
 use App\Livewire\Configuration\Lineas;
 use App\Livewire\Configuration\Marcas;
@@ -12,6 +15,7 @@ use App\Livewire\Configuration\ProductSettings;
 use App\Livewire\Configuration\Subgrupos;
 use App\Livewire\Configuration\Targets;
 use App\Livewire\Configuration\Temporadas;
+use App\Livewire\Facturacion\Configuracion as FacturacionConfiguracion;
 use App\Livewire\ListasPrecios\Buscador as ListasPreciosBuscador;
 use App\Livewire\ListasPrecios\Edit as ListasPreciosEdit;
 use App\Livewire\ListasPrecios\Index as ListasPreciosIndex;
@@ -21,21 +25,27 @@ use App\Livewire\Products\Edit as ProductsEdit;
 use App\Livewire\Products\Index as ProductsIndex;
 use App\Livewire\Products\Precios as ProductsPrecios;
 use App\Livewire\Products\Show as ProductsShow;
+use App\Livewire\Products\Stock as ProductsStock;
+use App\Livewire\Promociones\Index as PromocionesIndex;
 use App\Livewire\PuntosDeVenta\Index as PuntosDeVentaIndex;
+use App\Livewire\Reportes\Ventas as ReportesVentas;
 use App\Livewire\Roles\Create as RolesCreate;
 use App\Livewire\Roles\Edit as RolesEdit;
 use App\Livewire\Roles\Index as RolesIndex;
 use App\Livewire\Sucursales\Edit as SucursalesEdit;
 use App\Livewire\Sucursales\Index as SucursalesIndex;
 use App\Livewire\Sucursales\ListasPrecios as SucursalesListasPrecios;
+use App\Livewire\Sucursales\RemitoNuevo as SucursalesRemitoNuevo;
 use App\Livewire\Sucursales\Remitos as SucursalesRemitos;
 use App\Livewire\Sucursales\Stock as SucursalesStock;
 use App\Livewire\Users\Create;
 use App\Livewire\Users\Edit;
 use App\Livewire\Users\Index;
+use App\Livewire\Ventas\PorArticulo as VentasPorArticulo;
 use App\Models\Remito;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 // Redirección de la raíz al dashboard
 Route::get('/', function () {
@@ -69,6 +79,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/productos', ProductsIndex::class)->name('productos.index');
     Route::get('/productos/crear', ProductsCreate::class)->name('productos.create');
     Route::get('/productos/precios', ProductsPrecios::class)->name('productos.precios');
+    // Antes de /productos/{productId}, si no "stock" se toma como un id.
+    Route::get('/productos/stock', ProductsStock::class)->name('productos.stock');
     Route::get('/productos/{productId}', ProductsShow::class)->name('productos.show');
     Route::get('/productos/{productId}/editar', ProductsEdit::class)->name('productos.edit');
 
@@ -105,14 +117,55 @@ Route::middleware('auth')->group(function () {
     Route::get('/sucursales', SucursalesIndex::class)->name('sucursales.index');
     Route::get('/sucursales/listas-precios', SucursalesListasPrecios::class)->name('sucursales.listas-precios');
     Route::get('/sucursales/stock', SucursalesStock::class)->name('sucursales.stock');
-    Route::get('/sucursales/remitos', SucursalesRemitos::class)->name('sucursales.remitos');
+    // Remitos: mueven stock entre sucursales, por eso cada acción tiene su permiso.
+    Route::get('/sucursales/remitos', SucursalesRemitos::class)
+        ->middleware('can:remitos.ver')->name('sucursales.remitos');
+    Route::get('/sucursales/remitos/nuevo', SucursalesRemitoNuevo::class)
+        ->middleware('can:remitos.crear')->name('sucursales.remitos.nuevo');
     Route::get('/sucursales/remitos/{id}/imprimir', function (int $id) {
         $remito = Remito::with(['sucursalOrigen', 'sucursalDestino', 'detalles.product', 'user'])->findOrFail($id);
 
         return view('remitos.imprimir', compact('remito'));
-    })->name('remitos.imprimir');
+    })->middleware('can:remitos.ver')->whereNumber('id')->name('remitos.imprimir');
     Route::get('/sucursales/{id}/editar', SucursalesEdit::class)->name('sucursales.edit');
 
     // Puntos de venta
     Route::get('/puntos-de-venta', PuntosDeVentaIndex::class)->name('pdv.index');
+
+    // Caja y cobro
+    Route::get('/cajas/cierres', CajasCierres::class)->middleware('can:cajas.ver')->name('cajas.cierres');
+    Route::get('/promociones-bancarias', PromocionesIndex::class)->middleware('can:promociones.gestionar')->name('promociones.index');
+    Route::get('/cajeros', CajerosIndex::class)->middleware('can:cajeros.gestionar')->name('cajeros.index');
+
+    // Facturación electrónica
+    Route::get('/facturacion/configuracion', FacturacionConfiguracion::class)->middleware('can:facturacion.configurar')->name('facturacion.configuracion');
+
+    // Reportes
+    Route::get('/reportes/ventas', ReportesVentas::class)->middleware('can:reportes.ver')->name('reportes.ventas');
+    Route::get('/reportes/ventas/exportar', ExportarVentasController::class)->middleware('can:reportes.ver')->name('reportes.ventas.exportar');
+
+    // Ventas
+    Route::get('/ventas', VentasPorArticulo::class)->name('ventas.por-articulo');
+
+    // Instalador del POS. Detrás del mismo permiso que instalar una caja: el kit lleva
+    // el código completo del POS y quien lo tiene puede levantar una terminal.
+    Route::get('/puntos-de-venta/instalador', function () {
+        $zip = Storage::disk('local')->path('pos-kit/instalador-pos.zip');
+
+        abort_unless(file_exists($zip), 404, 'Todavía no se generó el instalador. Ejecutá: php artisan pos:kit <ruta-de-un-pos>');
+
+        return response()->download($zip, 'instalador-pos.zip');
+    })->middleware('can:terminales.instalar')->name('pdv.instalador');
+
+    // App de escritorio (NativePHP). Mismo permiso: con el ejecutable y un código se da
+    // de alta una caja.
+    Route::get('/puntos-de-venta/instalador-escritorio', function () {
+        $carpeta = Storage::disk('local')->path('pos-escritorio');
+        $meta = json_decode(@file_get_contents("{$carpeta}/pos-escritorio.json") ?: 'null', true);
+        $archivo = $meta ? "{$carpeta}/pos-escritorio.{$meta['formato']}" : null;
+
+        abort_unless($archivo && file_exists($archivo), 404, 'Todavía no se publicó la app de escritorio. Ejecutá: php artisan pos:publicar-escritorio <carpeta win-unpacked>');
+
+        return response()->download($archivo, "POS-Escritorio-{$meta['version']}.{$meta['formato']}");
+    })->middleware('can:terminales.instalar')->name('pdv.instalador-escritorio');
 });

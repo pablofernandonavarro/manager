@@ -45,12 +45,15 @@
             </div>
         </div>
 
-        @if($esCentral)
-            <div class="mt-4 flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg px-4 py-2.5">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                </svg>
-                <span>Modo <strong>Central</strong>: usá el botón <strong>Enviar</strong> para crear un remito hacia las sucursales.</span>
+        @if($puedeEnviar)
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg px-4 py-2.5">
+                <span class="flex items-center gap-2">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    <span><strong>Enviar</strong> manda un artículo desde {{ $sucursalActual?->nombre }} a otras sucursales.</span>
+                </span>
+                <a href="{{ route('sucursales.remitos.nuevo') }}" class="font-semibold hover:underline">Remito con varios artículos →</a>
             </div>
         @endif
     </div>
@@ -67,7 +70,7 @@
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Stock Global</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Marca</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Línea</th>
-                        @if($esCentral)
+                        @if($puedeEnviar)
                             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Remito</th>
                         @endif
                     </tr>
@@ -102,10 +105,10 @@
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900">{{ $producto->marca?->nombre ?? '-' }}</td>
                             <td class="px-6 py-4 text-sm text-gray-900">{{ $producto->linea?->nombre ?? '-' }}</td>
-                            @if($esCentral)
+                            @if($puedeEnviar)
                                 <td class="px-6 py-4 text-center">
                                     @if($producto->stock_sucursal > 0)
-                                        <button type="button" wire:click="abrirRemito({{ $producto->id }}, '{{ addslashes($producto->nombre) }}', {{ $producto->stock_sucursal }})"
+                                        <button type="button" wire:click="abrirRemito({{ $producto->id }})"
                                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
@@ -120,7 +123,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $esCentral ? 7 : 6 }}" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                            <td colspan="{{ $puedeEnviar ? 7 : 6 }}" class="px-6 py-10 text-center text-sm text-gray-400 italic">
                                 No se encontraron productos
                             </td>
                         </tr>
@@ -217,7 +220,7 @@
                 <!-- Stock disponible en Central -->
                 <div class="px-6 pt-4">
                     <div class="flex items-center justify-between bg-indigo-50 rounded-lg px-4 py-3">
-                        <span class="text-sm font-medium text-indigo-700">Disponible en Central</span>
+                        <span class="text-sm font-medium text-indigo-700">Disponible en {{ $sucursalActual?->nombre }}</span>
                         <span class="text-xl font-bold text-indigo-900">{{ number_format($remitoStockDisponible) }}</span>
                     </div>
                 </div>
@@ -236,7 +239,7 @@
                         <tbody class="divide-y divide-gray-100">
                             @foreach($sucursalesDestino as $suc)
                                 <tr>
-                                    <td class="py-2.5 text-gray-800 font-medium">{{ $suc->nombre }}</td>
+                                    <td class="py-2.5 text-gray-800 font-medium">{{ $suc->nombre }}{{ $suc->isCentral() ? ' (Central)' : '' }}</td>
                                     <td class="py-2.5 text-center">
                                         <span class="text-sm {{ ($stockPorSucursal[$suc->id] ?? 0) > 0 ? 'text-green-700 font-semibold' : 'text-gray-400' }}">
                                             {{ number_format($stockPorSucursal[$suc->id] ?? 0) }}

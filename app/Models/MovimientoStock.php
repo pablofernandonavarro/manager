@@ -14,6 +14,7 @@ class MovimientoStock extends Model
     protected $table = 'movimientos_stock';
 
     protected $fillable = [
+        'uuid',
         'punto_de_venta_id',
         'sucursal_id',
         'product_id',
