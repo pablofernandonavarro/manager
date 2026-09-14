@@ -10,7 +10,8 @@
 # (certbot). Pensado para una e2-micro (1 GB de RAM): agrega swap y achica MySQL.
 #
 # Deja creado el usuario `deploy`, que es con el que entra GitHub Actions. Su clave
-# pública se pasa en DEPLOY_PUBLIC_KEY (variable de entorno).
+# pública se pasa en DEPLOY_PUBLIC_KEY (variable de entorno). ESCRITORIO_PUBLIC_KEY es la
+# del repo del POS, que solo puede publicar la app de escritorio (recibir-escritorio.sh).
 set -euo pipefail
 
 DOMINIO="${1:?Uso: provisionar.sh <dominio> <email>}"
@@ -93,6 +94,14 @@ if [ -n "${DEPLOY_PUBLIC_KEY:-}" ]; then
         || echo "$DEPLOY_PUBLIC_KEY" >> /home/deploy/.ssh/authorized_keys
     chown deploy:deploy /home/deploy/.ssh/authorized_keys
     chmod 600 /home/deploy/.ssh/authorized_keys
+fi
+# Clave del repo del POS: solo puede publicar la app de escritorio (comando forzado).
+install -m 755 "$(dirname "$0")/recibir-escritorio.sh" /usr/local/bin/recibir-escritorio 2>/dev/null \
+    || echo "AVISO: copiá deploy/recibir-escritorio.sh junto a este script para publicar la app de escritorio"
+if [ -n "${ESCRITORIO_PUBLIC_KEY:-}" ]; then
+    LINEA="command=\"/usr/local/bin/recibir-escritorio\",restrict $ESCRITORIO_PUBLIC_KEY"
+    grep -qF "$ESCRITORIO_PUBLIC_KEY" /home/deploy/.ssh/authorized_keys 2>/dev/null \
+        || echo "$LINEA" >> /home/deploy/.ssh/authorized_keys
 fi
 # Lo único que deploy puede hacer como root: recargar PHP y reiniciar la cola.
 cat > /etc/sudoers.d/deploy-manager <<SUDO
