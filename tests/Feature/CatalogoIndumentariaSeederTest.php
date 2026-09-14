@@ -99,9 +99,22 @@ class CatalogoIndumentariaSeederTest extends TestCase
 
         $caja = PuntoDeVenta::create(['sucursal_id' => Sucursal::where('nombre', SucursalesSeeder::LOCAL)->value('id'), 'nombre' => 'caja', 'secret' => Hash::make('x')]);
 
-        $datos = collect($this->withToken($caja->createToken('pos-sync')->plainTextToken)->getJson('/api/v1/sync/productos')->assertOk()->json('data'));
+        $token = $caja->createToken('pos-sync')->plainTextToken;
+
+        // La respuesta es streaming (catálogos grandes): el contenido sale de streamedContent().
+        $cuerpo = json_decode($this->withToken($token)->getJson('/api/v1/sync/productos')->assertOk()->streamedContent(), true);
+        $datos = collect($cuerpo['data']);
+        $this->assertSame($datos->count(), $cuerpo['total']);
+        $this->assertNotEmpty($cuerpo['synced_at']);
 
         $this->assertNull($datos->firstWhere('codigo_interno', 'CONF-4301'), 'el configurable no viaja');
+
+        // Delta: solo lo modificado después de updated_since.
+        $this->travel(5)->minutes();
+        Product::where('codigo_interno', 'PANT-001')->first()->update(['precio' => 31000]);
+        $delta = json_decode($this->withToken($token)->getJson('/api/v1/sync/productos?updated_since='.urlencode($cuerpo['synced_at']))->assertOk()->streamedContent(), true);
+        $this->assertSame(['PANT-001'], array_column($delta['data'], 'codigo_interno'));
+        $this->assertEquals(31000, $delta['data'][0]['precio']);
 
         $negroM = $datos->firstWhere('codigo_interno', 'CONF-4301-NEG-M');
         $this->assertSame(['Negro', 'M', 'CONF-4301', 'Remera básica algodón', 15], [$negroM['color'], $negroM['n_talle'], $negroM['parent_codigo_interno'], $negroM['parent_nombre'], $negroM['stock']]);

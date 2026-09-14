@@ -21,42 +21,65 @@ use App\Models\User;
 use App\Services\RegistroVentasPos;
 use App\Services\RemitoService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SyncController extends Controller
 {
     /**
-     * Catálogo de productos con soporte a delta sync.
-     * Incluye el stock de la sucursal del POS via subquery (sin N+1).
+     * Catálogo de productos con soporte a delta sync (`updated_since`).
+     *
+     * Se escribe en streaming, de a 500 productos y solo con las columnas que viajan: con
+     * ~10.000 productos armar la colección entera (products tiene ~150 columnas) superaba los
+     * 256 MB de PHP y la caja no podía bajar el catálogo. El JSON es el mismo de siempre
+     * ({data, total, synced_at}), así que las cajas existentes no cambian.
+     *
+     * `synced_at` se toma ANTES de consultar: un producto guardado mientras se arma la
+     * respuesta queda dentro del próximo delta.
      */
-    public function productos(Request $request): JsonResponse
+    public function productos(Request $request): StreamedResponse
     {
         /** @var \App\Models\PuntoDeVenta $pdv */
         $pdv = $request->user();
+        $syncedAt = now();
+        $desde = $request->filled('updated_since') ? Carbon::parse((string) $request->query('updated_since'))->utc() : null;
 
         $query = Product::query()
-            ->with('parent:id,codigo_interno,nombre')
-            ->where('es_vendible', true)
+            ->leftJoin('products as padres', 'padres.id', '=', 'products.parent_id')
+            ->where('products.es_vendible', true)
+            ->when($desde, fn ($q) => $q->where('products.updated_at', '>', $desde))
+            ->select([
+                'products.id', 'products.nombre', 'products.codigo_interno', 'products.codigo_barras', 'products.busqueda',
+                'products.precio', 'products.costo', 'products.stock', 'products.stock_critico', 'products.imagen_url',
+                'products.descripcion_web', 'products.marca', 'products.color', 'products.n_talle', 'products.genero',
+                'products.n_grupo', 'products.n_subgrupo', 'products.n_temporada', 'products.product_type',
+                'products.parent_id', 'products.es_vendible', 'products.atributos_extra', 'products.updated_at',
+                'padres.codigo_interno as parent_codigo_interno',
+                'padres.nombre as parent_nombre',
+            ])
             ->addSelect([
-                'products.*',
                 'stock_sucursal' => StockSucursal::select('cantidad')
                     ->whereColumn('product_id', 'products.id')
                     ->where('sucursal_id', $pdv->sucursal_id)
                     ->limit(1),
             ]);
 
-        if ($request->filled('updated_since')) {
-            $query->where('updated_at', '>', $request->updated_since);
-        }
+        return response()->stream(function () use ($query, $request, $syncedAt): void {
+            echo '{"data":[';
+            $total = 0;
 
-        $productos = $query->get();
+            foreach ($query->lazyById(500, 'products.id', 'id') as $producto) {
+                echo ($total ? ',' : '').json_encode(ProductSyncResource::make($producto)->resolve($request), JSON_UNESCAPED_UNICODE);
 
-        return response()->json([
-            'data' => ProductSyncResource::collection($productos),
-            'total' => $productos->count(),
-            'synced_at' => now()->toIso8601String(),
-        ]);
+                if (++$total % 500 === 0) {
+                    flush();
+                }
+            }
+
+            echo '],"total":'.$total.',"synced_at":'.json_encode($syncedAt->toIso8601String()).'}';
+        }, 200, ['Content-Type' => 'application/json']);
     }
 
     /**

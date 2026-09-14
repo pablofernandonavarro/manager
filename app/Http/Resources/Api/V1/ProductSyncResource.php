@@ -33,8 +33,9 @@ class ProductSyncResource extends JsonResource
             'parent_id' => $this->parent_id,
             // El padre (configurable) no se manda porque no se vende; la caja necesita su
             // código y nombre para buscar por modelo y elegir color y talle.
-            'parent_codigo_interno' => $this->parent?->codigo_interno,
-            'parent_nombre' => $this->parent?->nombre,
+            // Del join de sync/productos si viene; si no, de la relación.
+            'parent_codigo_interno' => array_key_exists('parent_codigo_interno', $this->resource->getAttributes()) ? $this->resource->getAttributes()['parent_codigo_interno'] : $this->parent?->codigo_interno,
+            'parent_nombre' => array_key_exists('parent_nombre', $this->resource->getAttributes()) ? $this->resource->getAttributes()['parent_nombre'] : $this->parent?->nombre,
             'es_vendible' => $this->es_vendible,
             'atributos_extra' => $this->atributos_extra,
             'updated_at' => $this->updated_at?->toIso8601String(),
