@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\V1\PosAuthController;
 use App\Http\Controllers\Api\V1\PosComandosController;
 use App\Http\Controllers\Api\V1\PosDevolucionesController;
+use App\Http\Controllers\Api\V1\PosEstadoController;
 use App\Http\Controllers\Api\V1\PosFacturasController;
 use App\Http\Controllers\Api\V1\PosProvisionController;
 use App\Http\Controllers\Api\V1\PosRemitosController;
@@ -48,6 +49,7 @@ Route::prefix('v1')->group(function (): void {
 
         // Canal de órdenes: la caja pregunta qué tiene pendiente y reporta el resultado.
         Route::get('pos/comandos', [PosComandosController::class, 'index']);
+        Route::post('pos/estado', [PosEstadoController::class, 'reportar']);
         Route::post('pos/comandos/{comando}/resultado', [PosComandosController::class, 'resultado']);
 
         // Remitos que vienen en camino a la sucursal de la caja, y su recepción.

@@ -175,30 +175,40 @@ class Index extends Component
     public function render(): mixed
     {
         $escritorio = $this->infoDelEscritorio();
+        $ultimaVersion = [
+            'escritorio' => $escritorio['version'] ?? null,
+            'clasica' => VersionPos::vigente()?->version,
+        ];
+
+        $puntosDeVenta = PuntoDeVenta::with(['sucursal', 'ultimoComando'])
+            // Para mostrar si la caja ya se instaló alguna vez y si tiene un código
+            // sin usar. Sin esto no hay forma de saber desde el Manager en qué estado
+            // quedó cada terminal.
+            ->withMax('codigosInstalacion as instalado_at', 'usado_at')
+            ->withCount([
+                'codigosInstalacion as codigos_pendientes' => fn ($q) => $q->utilizables(),
+            ])
+            ->orderBy('sucursal_id')
+            ->orderBy('nombre')
+            ->get();
+
+        // Solo las instaladas: una caja dada de alta y sin instalar no es un problema.
+        $salud = $puntosDeVenta->filter(fn ($p) => $p->instalado_at)
+            ->mapWithKeys(fn ($p) => [$p->id => $p->salud($ultimaVersion[$p->tipo_instalacion] ?? null)]);
 
         return view('livewire.puntos-de-venta.index', [
+            'salud' => $salud,
+            'cajasConProblemas' => $salud->filter(fn ($s) => in_array($s['nivel'], ['critico', 'alerta'], true))->count(),
+            'cajasCriticas' => $salud->where('nivel', 'critico')->count(),
             'comandosDisponibles' => ComandoPosEnum::cases(),
             'kit' => $this->infoDelKit(),
             'escritorio' => $escritorio,
             // Contra qué se compara la versión que informa cada caja, según cómo esté instalada.
-            'ultimaVersion' => [
-                'escritorio' => $escritorio['version'] ?? null,
-                'clasica' => VersionPos::vigente()?->version,
-            ],
+            'ultimaVersion' => $ultimaVersion,
             // Lo que la caja tiene que poder abrir. manager.test solo existe en esta PC:
             // en producción es la dirección pública o de red del Manager.
             'urlManager' => url('/'),
-            'puntosDeVenta' => PuntoDeVenta::with(['sucursal', 'ultimoComando'])
-                // Para mostrar si la caja ya se instaló alguna vez y si tiene un código
-                // sin usar. Sin esto no hay forma de saber desde el Manager en qué estado
-                // quedó cada terminal.
-                ->withMax('codigosInstalacion as instalado_at', 'usado_at')
-                ->withCount([
-                    'codigosInstalacion as codigos_pendientes' => fn ($q) => $q->utilizables(),
-                ])
-                ->orderBy('sucursal_id')
-                ->orderBy('nombre')
-                ->get(),
+            'puntosDeVenta' => $puntosDeVenta,
             'sucursales' => Sucursal::where('activo', true)->orderBy('nombre')->get(),
         ]);
     }

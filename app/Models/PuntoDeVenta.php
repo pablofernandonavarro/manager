@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SaludCaja;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,7 +32,17 @@ class PuntoDeVenta extends Model
         return [
             'activo' => 'boolean',
             'ultima_conexion_at' => 'datetime',
+            'estado_caja' => 'array',
+            'estado_reportado_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @return array{nivel: string, problemas: array<int, array{nivel: string, texto: string}>}
+     */
+    public function salud(?string $ultimaVersion = null): array
+    {
+        return SaludCaja::evaluar($this, $ultimaVersion);
     }
 
     /** Conectada si habló con el Manager hace poco: la caja consulta cada minuto. */

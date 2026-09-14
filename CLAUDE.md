@@ -368,6 +368,12 @@ Centralizada en el Manager: **un emisor** (`ConfiguracionFiscal`, fila única id
 - Permisos: `remitos.ver`, `remitos.crear`, `remitos.recibir`, `remitos.cancelar` (admin todos; supervisor ver y recibir). Cubierto por `tests/Feature/RemitosTest.php`.
 - **Recepción desde la caja**: `GET api/v1/pos/remitos` (en tránsito hacia la sucursal del PDV autenticado) y `POST api/v1/pos/remitos/{id}/recibir` (`PosRemitosController`). Recibir es **idempotente**: si ya estaba confirmado responde 200 `ya_recibido` con el stock actual, para que la caja pueda reintentar tras un corte; cancelado → 409; de otra sucursal → 404. Devuelve `stock[]` de la sucursal para esos productos. Quién recibió queda en `confirmado_por_user_id` / `confirmado_por_punto_de_venta_id`. Cubierto por `tests/Feature/PosRemitosTest.php`.
 
+## Salud de las cajas
+
+- Cada caja (desde 1.4.2) manda cada minuto `POST api/v1/pos/estado` (`PosEstadoController`) → `puntos_de_venta.estado_caja` + `estado_reportado_at`. `App\Support\SaludCaja::evaluar()` arma el diagnóstico al mostrar (Puntos de venta → columna Estado y aviso arriba): sin conexión, stock sin bajar >10 min (**sync trabado**), ventas sin enviar >15 min, facturas sin CAE >30 min o rechazadas, jobs fallidos/acumulados, versión vieja, caja que no informa.
+- **"En línea" no alcanza**: la caja 2 estuvo 11 horas sin bajar stock con la última conexión al día (seguía respondiendo `pos:comandos`). Por eso el reporte sale de ese proceso y el stock se evalúa aparte.
+- Las antigüedades internas se miden contra `generado_at` del reporte (reloj de la caja): un reloj desfasado no dispara alertas. Textos de duración propios en español (`duracion()`): el locale de la app es `en` y `diffForHumans` saldría en inglés.
+
 ## Instalador descargable
 
 ### App de escritorio (camino principal)

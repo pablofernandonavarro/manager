@@ -242,6 +242,13 @@
         @endif
     </div>
 
+    @if($cajasConProblemas > 0)
+        <div class="rounded-xl border px-4 py-3 text-sm {{ $cajasCriticas > 0 ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
+            <strong>{{ $cajasConProblemas }} caja(s) necesitan atención.</strong>
+            Mirá la columna Estado: una caja puede figurar en línea y no estar bajando stock o enviando ventas.
+        </div>
+    @endif
+
     <!-- Listado -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
@@ -251,6 +258,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instalación</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Versión</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
@@ -341,6 +349,40 @@
                                     <span class="w-1.5 h-1.5 rounded-full {{ $pdv->estaConectada() ? 'bg-green-500' : 'bg-gray-400' }}"></span>
                                     {{ $pdv->estaConectada() ? 'En línea' : 'Última conexión '.$pdv->ultima_conexion_at->diffForHumans() }}
                                 </p>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 align-top">
+                            @if($s = $salud[$pdv->id] ?? null)
+                                @php
+                                    $estilos = [
+                                        'critico' => ['bg-red-100 text-red-800', 'bg-red-500', 'Con problemas'],
+                                        'alerta' => ['bg-amber-100 text-amber-800', 'bg-amber-500', 'Revisar'],
+                                        'ok' => ['bg-green-100 text-green-800', 'bg-green-500', 'Todo bien'],
+                                        'sin_datos' => ['bg-gray-100 text-gray-600', 'bg-gray-400', 'Sin datos'],
+                                        'inactiva' => ['bg-gray-100 text-gray-500', 'bg-gray-300', 'Inactiva'],
+                                    ][$s['nivel']];
+                                    $estado = $pdv->estado_caja ?? [];
+                                @endphp
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium {{ $estilos[0] }}">
+                                    <span class="w-1.5 h-1.5 rounded-full {{ $estilos[1] }}"></span>
+                                    {{ $estilos[2] }}
+                                </span>
+                                <ul class="mt-1 space-y-0.5 max-w-xs">
+                                    @foreach($s['problemas'] as $problema)
+                                        <li class="text-xs {{ $problema['nivel'] === 'critico' ? 'text-red-700' : ($problema['nivel'] === 'alerta' ? 'text-amber-700' : 'text-gray-500') }}">{{ $problema['texto'] }}</li>
+                                    @endforeach
+                                </ul>
+                                @if($s['nivel'] !== 'sin_datos' && $estado)
+                                    <p class="mt-1 text-xs text-gray-400">
+                                        {{ $estado['ventas_pendientes'] ?? 0 }} sin enviar ·
+                                        {{ $estado['facturas_pendientes'] ?? 0 }} fact. pendientes
+                                        @if($estado['turno_abierto'] ?? null)
+                                            · caja abierta ({{ $estado['turno_abierto']['cajero'] ?? '' }})
+                                        @endif
+                                    </p>
+                                @endif
+                            @else
+                                <span class="text-xs text-gray-400">—</span>
                             @endif
                         </td>
                         <td class="px-6 py-4 text-center">
@@ -434,7 +476,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                        <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-400 italic">
                             No hay puntos de venta creados todavía
                         </td>
                     </tr>
