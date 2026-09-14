@@ -7,6 +7,8 @@ use App\Livewire\Auth\Login;
 use App\Livewire\Auth\ResetPassword;
 use App\Livewire\Cajas\Cierres as CajasCierres;
 use App\Livewire\Cajeros\Index as CajerosIndex;
+use App\Livewire\Clientes\CuentaCorriente as ClientesCuentaCorriente;
+use App\Livewire\Clientes\Index as ClientesIndex;
 use App\Livewire\Configuration\Grupos;
 use App\Livewire\Configuration\Lineas;
 use App\Livewire\Configuration\Marcas;
@@ -144,6 +146,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/cajas/cierres', CajasCierres::class)->middleware('can:cajas.ver')->name('cajas.cierres');
     Route::get('/promociones-bancarias', PromocionesIndex::class)->middleware('can:promociones.gestionar')->name('promociones.index');
     Route::get('/cajeros', CajerosIndex::class)->middleware('can:cajeros.gestionar')->name('cajeros.index');
+
+    // Clientes y cuenta corriente
+    Route::get('/clientes', ClientesIndex::class)->middleware('can:clientes.gestionar')->name('clientes.index');
+    Route::get('/clientes/{cliente}', ClientesCuentaCorriente::class)->middleware('can:clientes.gestionar')->name('clientes.show');
 
     // Facturación electrónica
     Route::get('/facturacion/configuracion', FacturacionConfiguracion::class)->middleware('can:facturacion.configurar')->name('facturacion.configuracion');

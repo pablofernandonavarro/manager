@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Jobs\AutorizarComprobante;
 use App\Models\Devolucion;
+use App\Services\CuentaCorrienteService;
 use App\Services\Facturacion\EmisionComprobantes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  */
 class PosDevolucionesController extends Controller
 {
-    public function sync(Request $request, EmisionComprobantes $emision): JsonResponse
+    public function sync(Request $request, EmisionComprobantes $emision, CuentaCorrienteService $cuentas): JsonResponse
     {
         /** @var \App\Models\PuntoDeVenta $pdv */
         $pdv = $request->user();
@@ -43,7 +44,7 @@ class PosDevolucionesController extends Controller
         $resultados = [];
         $notasDeCredito = [];
 
-        DB::transaction(function () use ($datos, $pdv, $emision, &$resultados, &$notasDeCredito): void {
+        DB::transaction(function () use ($datos, $pdv, $emision, $cuentas, &$resultados, &$notasDeCredito): void {
             foreach ($datos['devoluciones'] as $d) {
                 if (Devolucion::where('uuid', $d['uuid'])->exists()) {
                     $resultados[] = ['uuid' => $d['uuid'], 'status' => 'duplicada'];
@@ -58,6 +59,8 @@ class PosDevolucionesController extends Controller
                 ]);
 
                 $devolucion->items()->createMany($d['items']);
+
+                $cuentas->registrarDevolucion($devolucion);
 
                 if ($nota = $emision->crearNotaDeCredito($devolucion)) {
                     $notasDeCredito[] = $nota;

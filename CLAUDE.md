@@ -368,6 +368,12 @@ Centralizada en el Manager: **un emisor** (`ConfiguracionFiscal`, fila única id
 - Permisos: `remitos.ver`, `remitos.crear`, `remitos.recibir`, `remitos.cancelar` (admin todos; supervisor ver y recibir). Cubierto por `tests/Feature/RemitosTest.php`.
 - **Recepción desde la caja**: `GET api/v1/pos/remitos` (en tránsito hacia la sucursal del PDV autenticado) y `POST api/v1/pos/remitos/{id}/recibir` (`PosRemitosController`). Recibir es **idempotente**: si ya estaba confirmado responde 200 `ya_recibido` con el stock actual, para que la caja pueda reintentar tras un corte; cancelado → 409; de otra sucursal → 404. Devuelve `stock[]` de la sucursal para esos productos. Quién recibió queda en `confirmado_por_user_id` / `confirmado_por_punto_de_venta_id`. Cubierto por `tests/Feature/PosRemitosTest.php`.
 
+## Clientes y cuenta corriente
+
+- `clientes` (datos fiscales con códigos de AFIP, `cuenta_corriente`, `limite_credito` null = sin límite) y `movimientos_cuenta_corriente`. **El saldo no se guarda**: es la suma de movimientos (+ deuda / − pago). Pantallas `Clientes\Index` (`clientes.gestionar`, admin y supervisor) y `Clientes\CuentaCorriente` (estado de cuenta; pagos y ajustes manuales con `clientes.cuenta_corriente`, admin).
+- Cajas: `GET sync/clientes` (activos con saldo), `POST sync/cobros-cuenta-corriente` (idempotente por uuid; un cliente inexistente rechaza **ese** cobro con `cliente_inexistente`, no la tanda). `RegistroVentasPos` vincula `ventas.cliente_id` solo si existe (sin `exists` en la validación) y `CuentaCorrienteService::registrarVenta` carga la parte pagada con `cuenta_corriente`; las devoluciones al medio original acreditan como mucho lo cargado en esa venta. La caja calcula su saldo offline con el **mismo criterio**: cambiar las reglas en los dos lados.
+- `pagos_venta.medio` es enum en MySQL: agregar un medio de pago nuevo requiere migración (`->change()`).
+
 ## Salud de las cajas
 
 - Cada caja (desde 1.4.2) manda cada minuto `POST api/v1/pos/estado` (`PosEstadoController`) → `puntos_de_venta.estado_caja` + `estado_reportado_at`. `App\Support\SaludCaja::evaluar()` arma el diagnóstico al mostrar (Puntos de venta → columna Estado y aviso arriba): sin conexión, stock sin bajar >10 min (**sync trabado**), ventas sin enviar >15 min, facturas sin CAE >30 min o rechazadas, jobs fallidos/acumulados, versión vieja, caja que no informa.

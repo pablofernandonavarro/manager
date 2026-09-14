@@ -19,6 +19,7 @@ class PagoVenta extends Model
         'credito' => 'Crédito',
         'transferencia' => 'Transferencia',
         'qr' => 'QR / billetera',
+        'cuenta_corriente' => 'Cuenta corriente',
     ];
 
     protected $fillable = [

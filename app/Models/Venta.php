@@ -28,6 +28,7 @@ class Venta extends Model
         'metodo_pago',
         'cliente_nombre',
         'cliente_documento',
+        'cliente_id',
         'sincronizado_at',
     ];
 
@@ -71,6 +72,11 @@ class Venta extends Model
     public function devoluciones(): HasMany
     {
         return $this->hasMany(Devolucion::class, 'venta_uuid', 'uuid');
+    }
+
+    public function cliente(): BelongsTo
+    {
+        return $this->belongsTo(Cliente::class);
     }
 
     public function turno(): BelongsTo

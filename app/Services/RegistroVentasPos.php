@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Cliente;
 use App\Models\Comprobante;
 use App\Models\DetalleVenta;
 use App\Models\MovimientoStock;
@@ -22,6 +23,7 @@ class RegistroVentasPos
 {
     public function __construct(
         private readonly EmisionComprobantes $emision,
+        private readonly CuentaCorrienteService $cuentas,
     ) {}
 
     /**
@@ -69,10 +71,14 @@ class RegistroVentasPos
             'metodo_pago' => $datos['metodo_pago'] ?? null,
             'cliente_nombre' => $datos['cliente_nombre'] ?? null,
             'cliente_documento' => $datos['cliente_documento'] ?? null,
+            // Sin exists en la validación: un cliente borrado mientras la caja estaba offline no
+            // puede trabar la venta. Se vincula solo si existe.
+            'cliente_id' => isset($datos['cliente_id']) && Cliente::whereKey($datos['cliente_id'])->exists() ? $datos['cliente_id'] : null,
             'sincronizado_at' => $sincronizadoAt,
         ]);
 
         $this->guardarPagos($venta, $datos['pagos'] ?? []);
+        $this->cuentas->registrarVenta($venta);
 
         $productIds = [];
 

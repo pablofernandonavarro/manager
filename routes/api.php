@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\V1\PosAuthController;
+use App\Http\Controllers\Api\V1\PosClientesController;
 use App\Http\Controllers\Api\V1\PosComandosController;
 use App\Http\Controllers\Api\V1\PosDevolucionesController;
 use App\Http\Controllers\Api\V1\PosEstadoController;
@@ -43,6 +44,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('sync/movimientos', [SyncController::class, 'movimientos']);
         Route::get('sync/promociones', [SyncController::class, 'promociones']);
         Route::get('sync/cajeros', [SyncController::class, 'cajeros']);
+        Route::get('sync/clientes', [PosClientesController::class, 'index']);
+        Route::post('sync/cobros-cuenta-corriente', [PosClientesController::class, 'cobros']);
         Route::post('sync/devoluciones', [PosDevolucionesController::class, 'sync']);
         Route::post('sync/turnos', [PosTurnosController::class, 'sync']);
         Route::get('precios/{productId}', [SyncController::class, 'precio']);
