@@ -488,6 +488,8 @@ Se extrae con PowerShell y no con `ZipArchive` porque el PHP de las cajas (XAMPP
 
 El POS vive en `C:\MisLaravel\pos` (Laravel + Livewire + SQLite, offline-first). `SyncController` es la única puerta de entrada. Cada venta y movimiento que llega trae un `uuid` generado en la caja, con índice único en `ventas` y `movimientos_stock`: si el uuid ya existe se descarta y se responde `duplicada`/`duplicado` en `resultados[]`, en vez de volver a insertar. Esto es lo que hace seguro el `retry()` del cliente, así que **no saques la validación `required|uuid` ni el chequeo previo a insertar**, y cualquier cambio al payload hay que hacerlo en los dos repos a la vez. Cubierto por `tests/Feature/SyncIdempotenciaTest.php`.
 
+**`/sync/productos` responde en streaming** (`lazyById(500)`, solo las columnas que viajan, padre por join): con ~10.000 productos la colección Eloquent superaba los 256 MB de PHP y la caja no podía bajar el catálogo. Medido en producción: 10.000 productos en 2,2 s, 6,1 MB de JSON, 48 MB de pico. Mismo JSON `{data, total, synced_at}`; `synced_at` se toma antes de consultar. La caja lo pide cada 5 minutos con `updated_since` (delta). En tests el cuerpo sale de `->streamedContent()`.
+
 `/sync/ventas` ya genera él mismo el `MovimientoStock` de la venta y descuenta `stock_sucursal`; por eso el POS filtra los movimientos tipo `venta` y no los reenvía por `/sync/movimientos`. Mandarlos por ambos lados descuenta el stock dos veces.
 
 Al tocar `stock_sucursal.cantidad` no uses `DB::raw()` dentro de `updateOrCreate()`: el modelo castea `cantidad` a `integer` y un `Query\Expression` revienta con "could not be converted to int" (era un 500 fijo en `/sync/ventas`). Usá `firstOrNew()` + `max(0, ...)`.
