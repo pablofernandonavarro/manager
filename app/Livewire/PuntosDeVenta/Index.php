@@ -88,7 +88,7 @@ class Index extends Component
         $secret = Str::random(40);
         $pdv->update(['secret' => Hash::make($secret)]);
 
-        $this->dispatch('secret-generado', secret: $secret, nombre: $pdv->nombre);
+        $this->dispatch('secret-generado', secret: $secret, nombre: $pdv->nombre, pdvId: $pdv->id);
     }
 
     /**
@@ -119,17 +119,6 @@ class Index extends Component
 
         $pdv = PuntoDeVenta::findOrFail($id);
         $pdv->update(['activo' => ! $pdv->activo]);
-    }
-
-    public function generarToken(int $id): void
-    {
-        $this->authorize('terminales.instalar');
-
-        $pdv = PuntoDeVenta::findOrFail($id);
-        $pdv->tokens()->delete();
-
-        $token = $pdv->createToken('pos-sync')->plainTextToken;
-        $this->dispatch('token-generado', token: $token);
     }
 
     public function revocarTokens(int $id): void

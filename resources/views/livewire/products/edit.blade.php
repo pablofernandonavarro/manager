@@ -419,11 +419,22 @@
 
             <!-- Tab Inventario -->
             <div x-show="activeTab === 'inventario'" class="p-6 space-y-6">
+                <!-- Stock global (solo lectura) -->
+                <div class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                    <div>
+                        <p class="text-xs font-medium text-blue-600 uppercase tracking-wide">Stock global (todas las sucursales)</p>
+                        <p class="text-2xl font-bold text-blue-900 mt-0.5">{{ $product->stock ?? 0 }}</p>
+                    </div>
+                    <a href="{{ route('sucursales.ajuste-stock') }}" wire:navigate
+                       class="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Ajustar stock
+                    </a>
+                </div>
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock</label>
-                        <input type="number" wire:model="stock" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Stock Crítico</label>
                         <input type="number" wire:model="stock_critico" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">

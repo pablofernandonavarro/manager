@@ -126,6 +126,25 @@ class PosRemitosTest extends TestCase
         $this->assertSame(1, (int) StockSucursal::where('sucursal_id', $this->villaBosh->id)->where('product_id', $this->zapatillas->id)->value('cantidad'));
     }
 
+    public function test_la_ruta_sync_confirmar_suma_una_sola_vez_y_registra_el_movimiento(): void
+    {
+        $remito = $this->remitoA($this->villaBosh, [$this->zapatillas->id => 5]);
+
+        $r = $this->comoCaja('POST', "/api/v1/sync/remitos/{$remito->id}/confirmar")->assertOk();
+
+        $this->assertSame(6, $r->json('stock_actualizado.0.cantidad'));
+        $this->assertSame('ZAP001', $r->json('stock_actualizado.0.codigo_interno'));
+        $this->assertSame($this->cajaVillaBosh->id, $remito->fresh()->confirmado_por_punto_de_venta_id);
+        $this->assertSame(1, MovimientoStock::where('punto_de_venta_id', $this->cajaVillaBosh->id)->count());
+
+        $this->comoCaja('POST', "/api/v1/sync/remitos/{$remito->id}/confirmar")->assertStatus(422);
+        $this->assertSame(6, (int) StockSucursal::where('sucursal_id', $this->villaBosh->id)->where('product_id', $this->zapatillas->id)->value('cantidad'));
+
+        $ajeno = $this->remitoA($this->centro, [$this->zapatillas->id => 1]);
+        $this->comoCaja('POST', "/api/v1/sync/remitos/{$ajeno->id}/confirmar")->assertForbidden();
+        $this->assertSame(EstadoRemito::Remitido, $ajeno->fresh()->estado);
+    }
+
     public function test_sin_token_no_se_accede(): void
     {
         $this->getJson('/api/v1/pos/remitos')->assertUnauthorized();

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ExportarVentasController;
+use App\Http\Controllers\Sucursales\AjusteStockController;
 use App\Livewire\Auth\ForgotPassword;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\ResetPassword;
@@ -32,6 +33,7 @@ use App\Livewire\Reportes\Ventas as ReportesVentas;
 use App\Livewire\Roles\Create as RolesCreate;
 use App\Livewire\Roles\Edit as RolesEdit;
 use App\Livewire\Roles\Index as RolesIndex;
+use App\Livewire\Sucursales\AjusteStock as SucursalesAjusteStock;
 use App\Livewire\Sucursales\Edit as SucursalesEdit;
 use App\Livewire\Sucursales\Index as SucursalesIndex;
 use App\Livewire\Sucursales\ListasPrecios as SucursalesListasPrecios;
@@ -117,6 +119,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/sucursales', SucursalesIndex::class)->name('sucursales.index');
     Route::get('/sucursales/listas-precios', SucursalesListasPrecios::class)->name('sucursales.listas-precios');
     Route::get('/sucursales/stock', SucursalesStock::class)->name('sucursales.stock');
+    Route::get('/sucursales/ajuste-stock', SucursalesAjusteStock::class)->name('sucursales.ajuste-stock');
+    Route::get('/sucursales/ajuste-stock/plantilla', [AjusteStockController::class, 'plantilla'])->name('sucursales.ajuste-stock.plantilla');
     // Remitos: mueven stock entre sucursales, por eso cada acción tiene su permiso.
     Route::get('/sucursales/remitos', SucursalesRemitos::class)
         ->middleware('can:remitos.ver')->name('sucursales.remitos');

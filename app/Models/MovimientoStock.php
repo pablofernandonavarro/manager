@@ -16,6 +16,7 @@ class MovimientoStock extends Model
     protected $fillable = [
         'uuid',
         'punto_de_venta_id',
+        'ajuste_inventario_id',
         'sucursal_id',
         'product_id',
         'tipo',
@@ -38,6 +39,11 @@ class MovimientoStock extends Model
     public function puntoDeVenta(): BelongsTo
     {
         return $this->belongsTo(PuntoDeVenta::class);
+    }
+
+    public function ajusteInventario(): BelongsTo
+    {
+        return $this->belongsTo(AjusteInventario::class);
     }
 
     public function sucursal(): BelongsTo
