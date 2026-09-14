@@ -36,6 +36,7 @@ class SyncController extends Controller
         $pdv = $request->user();
 
         $query = Product::query()
+            ->with('parent:id,codigo_interno,nombre')
             ->where('es_vendible', true)
             ->addSelect([
                 'products.*',

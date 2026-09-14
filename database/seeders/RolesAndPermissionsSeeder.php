@@ -60,7 +60,7 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::create(['name' => $permiso, 'guard_name' => 'web']);
         }
 
-        $this->command->info('Permisos creados: ' . count($todosLosPermisos));
+        $this->command->info('Permisos creados: '.count($todosLosPermisos));
 
         // Refrescar caché de permisos después de crearlos
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
@@ -69,8 +69,11 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Rol: Admin (todos los permisos)
         $adminRole = Role::create(['name' => 'admin', 'guard_name' => 'web']);
-        $adminRole->givePermissionTo($todosLosPermisos);
-        $this->command->info('Rol admin creado con ' . $adminRole->permissions->count() . ' permisos');
+        // Todos los que existen, no solo los de esta lista: en una instalación nueva las
+        // migraciones de módulos (remitos, cajas, facturación, clientes...) crean sus permisos
+        // antes de que existan los roles, y no se los pueden asignar.
+        $adminRole->givePermissionTo(Permission::where('guard_name', 'web')->get());
+        $this->command->info('Rol admin creado con '.$adminRole->permissions->count().' permisos');
 
         // Rol: Supervisor (ver/exportar/anular ventas, ver productos, ver usuarios)
         $supervisorRole = Role::create(['name' => 'supervisor', 'guard_name' => 'web']);
@@ -81,14 +84,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'productos.ver',
             'usuarios.ver',
         ]);
-        $this->command->info('Rol supervisor creado con ' . $supervisorRole->permissions->count() . ' permisos');
+        // Los que las migraciones de módulos le dan al supervisor, por la misma razón.
+        $supervisorRole->givePermissionTo(Permission::where('guard_name', 'web')->whereIn('name', [
+            'terminales.ver', 'remitos.ver', 'remitos.recibir', 'cajas.ver', 'reportes.ver', 'facturacion.ver', 'clientes.gestionar',
+        ])->get());
+        $this->command->info('Rol supervisor creado con '.$supervisorRole->permissions->count().' permisos');
 
         // Rol: Cajero (solo lo necesario para el POS)
         $cajeroRole = Role::create(['name' => 'cajero', 'guard_name' => 'web']);
         $cajeroRole->givePermissionTo([
             'productos.ver',
         ]);
-        $this->command->info('Rol cajero creado con ' . $cajeroRole->permissions->count() . ' permisos');
+        $this->command->info('Rol cajero creado con '.$cajeroRole->permissions->count().' permisos');
 
         $this->command->info('Roles y permisos creados correctamente.');
     }

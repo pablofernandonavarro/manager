@@ -31,6 +31,10 @@ class ProductSyncResource extends JsonResource
             'n_temporada' => $this->n_temporada,
             'product_type' => $this->product_type,
             'parent_id' => $this->parent_id,
+            // El padre (configurable) no se manda porque no se vende; la caja necesita su
+            // código y nombre para buscar por modelo y elegir color y talle.
+            'parent_codigo_interno' => $this->parent?->codigo_interno,
+            'parent_nombre' => $this->parent?->nombre,
             'es_vendible' => $this->es_vendible,
             'atributos_extra' => $this->atributos_extra,
             'updated_at' => $this->updated_at?->toIso8601String(),

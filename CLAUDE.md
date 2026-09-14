@@ -368,6 +368,13 @@ Centralizada en el Manager: **un emisor** (`ConfiguracionFiscal`, fila única id
 - Permisos: `remitos.ver`, `remitos.crear`, `remitos.recibir`, `remitos.cancelar` (admin todos; supervisor ver y recibir). Cubierto por `tests/Feature/RemitosTest.php`.
 - **Recepción desde la caja**: `GET api/v1/pos/remitos` (en tránsito hacia la sucursal del PDV autenticado) y `POST api/v1/pos/remitos/{id}/recibir` (`PosRemitosController`). Recibir es **idempotente**: si ya estaba confirmado responde 200 `ya_recibido` con el stock actual, para que la caja pueda reintentar tras un corte; cancelado → 409; de otra sucursal → 404. Devuelve `stock[]` de la sucursal para esos productos. Quién recibió queda en `confirmado_por_user_id` / `confirmado_por_punto_de_venta_id`. Cubierto por `tests/Feature/PosRemitosTest.php`.
 
+## Seeders (datos de ejemplo de indumentaria)
+
+- `DatabaseSeeder`: roles → admin → listas → `SucursalesSeeder` (Central + Villa Bosh, lista PUBLICO por defecto) → `ProductSeeder` → `StockSeeder`. Corre con `WithoutModelEvents`: el `saving` de `Product` que arma `busqueda` no se dispara, por eso `ProductSeeder` la reconstruye al final.
+- `ProductSeeder`: 5 configurables (CONF-4301 Remera básica Negro/Blanco × S/M/L, etc.) creados con `ProductConfigurableService` en el formato `attributes` (el formato viejo `color`/`talle_nombre` dejaba variantes sin color, sin talle y con el código del padre) y 5 simples (PANT-001, ACC-00x). Reproducible por código; EAN-13 derivados de la posición en las listas (`App\Support\Ean13`): **agregar al final, no reordenar**.
+- `StockSeeder`: stock en `stock_sucursal` por variante y sucursal (Central el doble), nunca sobre el configurable; recalcula `products.stock`.
+- `RolesAndPermissionsSeeder` le da al admin **todos** los permisos existentes: en una base nueva las migraciones de módulos crean sus permisos antes que los roles (con `migrate:fresh --seed` el admin quedaba sin remitos, cajas, facturación…). Ese seeder no es reproducible (usa `create`). `DetallePrecioPublicoSeeder` es del esquema de precios anterior y no se llama.
+
 ## Clientes y cuenta corriente
 
 - `clientes` (datos fiscales con códigos de AFIP, `cuenta_corriente`, `limite_credito` null = sin límite) y `movimientos_cuenta_corriente`. **El saldo no se guarda**: es la suma de movimientos (+ deuda / − pago). Pantallas `Clientes\Index` (`clientes.gestionar`, admin y supervisor) y `Clientes\CuentaCorriente` (estado de cuenta; pagos y ajustes manuales con `clientes.cuenta_corriente`, admin).
