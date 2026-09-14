@@ -83,7 +83,7 @@
                                 <p class="mt-1.5 text-xs text-gray-500">
                                     Versión {{ $escritorio['version'] }} ·
                                     {{ number_format($escritorio['tamano'] / 1024 / 1024, 0) }} MB ·
-                                    publicado el {{ \Carbon\Carbon::parse($escritorio['generado_at'])->format('d/m/Y H:i') }}
+                                    publicado el {{ \Carbon\Carbon::parse($escritorio['generado_at'])->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}
                                 </p>
                             @else
                                 <p class="text-xs text-amber-700 bg-amber-50 rounded px-3 py-2">
