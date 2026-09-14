@@ -51,6 +51,15 @@ class SyncVentasRequest extends FormRequest
             'ventas.*.pagos.*.promocion_id' => 'nullable|integer',
             'ventas.*.pagos.*.promocion_nombre' => 'nullable|string|max:120',
             'ventas.*.pagos.*.referencia' => 'nullable|string|max:60',
+
+            // Facturación electrónica: presente solo si la caja pide factura. Sin reglas de
+            // formato estrictas a propósito: un receptor mal cargado no puede frenar la venta;
+            // el comprobante queda rechazado y se ve en el Manager.
+            'ventas.*.factura' => 'nullable|array',
+            'ventas.*.factura.condicion_iva' => 'nullable|integer',
+            'ventas.*.factura.doc_tipo' => 'nullable|integer',
+            'ventas.*.factura.doc_nro' => 'nullable|string|max:20',
+            'ventas.*.factura.nombre' => 'nullable|string|max:150',
         ];
     }
 }

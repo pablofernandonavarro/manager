@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\AutorizarComprobante;
 use App\Models\Devolucion;
+use App\Services\Facturacion\EmisionComprobantes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,10 +13,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * Comprobantes de devolución que manda la caja. Idempotente por uuid y sin efecto sobre
  * el stock: la mercadería devuelta ya llegó como movimiento de stock tipo devolucion.
+ * Si la venta se facturó, la devolución genera su nota de crédito.
  */
 class PosDevolucionesController extends Controller
 {
-    public function sync(Request $request): JsonResponse
+    public function sync(Request $request, EmisionComprobantes $emision): JsonResponse
     {
         /** @var \App\Models\PuntoDeVenta $pdv */
         $pdv = $request->user();
@@ -38,8 +41,9 @@ class PosDevolucionesController extends Controller
         ]);
 
         $resultados = [];
+        $notasDeCredito = [];
 
-        DB::transaction(function () use ($datos, $pdv, &$resultados): void {
+        DB::transaction(function () use ($datos, $pdv, $emision, &$resultados, &$notasDeCredito): void {
             foreach ($datos['devoluciones'] as $d) {
                 if (Devolucion::where('uuid', $d['uuid'])->exists()) {
                     $resultados[] = ['uuid' => $d['uuid'], 'status' => 'duplicada'];
@@ -55,9 +59,18 @@ class PosDevolucionesController extends Controller
 
                 $devolucion->items()->createMany($d['items']);
 
+                if ($nota = $emision->crearNotaDeCredito($devolucion)) {
+                    $notasDeCredito[] = $nota;
+                }
+
                 $resultados[] = ['uuid' => $d['uuid'], 'status' => 'creada'];
             }
         });
+
+        // Después del commit, como las facturas.
+        foreach ($notasDeCredito as $nota) {
+            AutorizarComprobante::dispatch($nota);
+        }
 
         return response()->json(['resultados' => $resultados]);
     }

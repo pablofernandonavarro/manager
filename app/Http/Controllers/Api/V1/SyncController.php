@@ -10,15 +10,15 @@ use App\Http\Requests\Api\V1\SyncVentasRequest;
 use App\Http\Resources\Api\V1\PrecioSyncResource;
 use App\Http\Resources\Api\V1\ProductSyncResource;
 use App\Http\Resources\Api\V1\StockSyncResource;
+use App\Jobs\AutorizarComprobante;
 use App\Models\Cajero;
 use App\Models\DetallePrecio;
-use App\Models\DetalleVenta;
 use App\Models\MovimientoStock;
 use App\Models\Product;
 use App\Models\PromocionBancaria;
 use App\Models\Remito;
 use App\Models\StockSucursal;
-use App\Models\Venta;
+use App\Services\RegistroVentasPos;
 use App\Services\RemitoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -239,125 +239,41 @@ class SyncController extends Controller
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $pagos
-     */
-    private function guardarPagos(Venta $venta, array $pagos): void
-    {
-        $promocionesExistentes = PromocionBancaria::whereIn('id', array_filter(array_column($pagos, 'promocion_id')))->pluck('id')->all();
-
-        foreach ($pagos as $pago) {
-            $promocionId = $pago['promocion_id'] ?? null;
-
-            $venta->pagos()->create([
-                'medio' => $pago['medio'],
-                'monto' => $pago['monto'],
-                'descuento' => $pago['descuento'] ?? 0,
-                'importe' => $pago['importe'],
-                'tarjeta' => $pago['tarjeta'] ?? null,
-                'banco' => $pago['banco'] ?? null,
-                'cuotas' => $pago['cuotas'] ?? null,
-                'promocion_bancaria_id' => in_array($promocionId, $promocionesExistentes, true) ? $promocionId : null,
-                'promocion_nombre' => $pago['promocion_nombre'] ?? null,
-                'referencia' => $pago['referencia'] ?? null,
-            ]);
-        }
-    }
-
-    /**
      * Sincroniza un batch de ventas desde el POS.
      */
-    public function ventas(SyncVentasRequest $request): JsonResponse
+    public function ventas(SyncVentasRequest $request, RegistroVentasPos $registro): JsonResponse
     {
         /** @var \App\Models\PuntoDeVenta $pdv */
         $pdv = $request->user();
         $sincronizadoAt = now();
         $ventasCreadas = 0;
         $resultados = [];
+        $aAutorizar = [];
 
-        DB::transaction(function () use ($request, $pdv, $sincronizadoAt, &$ventasCreadas, &$resultados): void {
+        DB::transaction(function () use ($request, $pdv, $sincronizadoAt, $registro, &$ventasCreadas, &$resultados, &$aAutorizar): void {
             foreach ($request->ventas as $ventaData) {
-                $existente = Venta::where('uuid', $ventaData['uuid'])->first();
+                $registrada = $registro->registrar($pdv, $ventaData, $sincronizadoAt);
 
-                if ($existente) {
-                    $resultados[] = [
-                        'uuid' => $ventaData['uuid'],
-                        'status' => 'duplicada',
-                        'venta_id' => $existente->id,
-                    ];
-
-                    continue;
+                if ($registrada['status'] === 'creada') {
+                    $ventasCreadas++;
                 }
 
-                $venta = Venta::create([
-                    'uuid' => $ventaData['uuid'],
-                    'punto_de_venta_id' => $pdv->id,
-                    'sucursal_id' => $pdv->sucursal_id,
-                    'lista_precio_id' => $ventaData['lista_precio_id'] ?? null,
-                    'turno_uuid' => $ventaData['turno_uuid'] ?? null,
-                    'cajero' => $ventaData['cajero'] ?? null,
-                    'numero_venta' => $ventaData['numero_venta'] ?? null,
-                    'fecha' => $ventaData['fecha'],
-                    'subtotal' => $ventaData['subtotal'],
-                    'descuento' => $ventaData['descuento'] ?? 0,
-                    'descuento_manual' => $ventaData['descuento_manual'] ?? 0,
-                    'descuento_autorizado_por' => $ventaData['descuento_autorizado_por'] ?? null,
-                    'total' => $ventaData['total'],
-                    'metodo_pago' => $ventaData['metodo_pago'] ?? null,
-                    'cliente_nombre' => $ventaData['cliente_nombre'] ?? null,
-                    'cliente_documento' => $ventaData['cliente_documento'] ?? null,
-                    'sincronizado_at' => $sincronizadoAt,
-                ]);
-
-                $this->guardarPagos($venta, $ventaData['pagos'] ?? []);
-
-                $productIds = [];
-
-                foreach ($ventaData['items'] as $item) {
-                    DetalleVenta::create([
-                        'venta_id' => $venta->id,
-                        'product_id' => $item['product_id'],
-                        'cantidad' => $item['cantidad'],
-                        'precio_unitario' => $item['precio_unitario'],
-                        'subtotal' => $item['subtotal'],
-                    ]);
-
-                    MovimientoStock::create([
-                        'punto_de_venta_id' => $pdv->id,
-                        'sucursal_id' => $pdv->sucursal_id,
-                        'product_id' => $item['product_id'],
-                        'tipo' => 'venta',
-                        'cantidad' => -abs($item['cantidad']),
-                        'referencia' => $venta->numero_venta,
-                        'fecha' => $ventaData['fecha'],
-                        'sincronizado_at' => $sincronizadoAt,
-                    ]);
-
-                    $stockSucursal = StockSucursal::firstOrNew([
-                        'sucursal_id' => $pdv->sucursal_id,
-                        'product_id' => $item['product_id'],
-                    ]);
-
-                    $stockSucursal->cantidad = max(0, ($stockSucursal->cantidad ?? 0) - abs((int) $item['cantidad']));
-                    $stockSucursal->save();
-
-                    $productIds[] = $item['product_id'];
+                if ($registrada['comprobante']?->estado === 'pendiente') {
+                    $aAutorizar[] = $registrada['comprobante'];
                 }
-
-                // Recalcular stock global desde suma de stock_sucursal
-                foreach (array_unique($productIds) as $productId) {
-                    $totalStock = StockSucursal::where('product_id', $productId)->sum('cantidad');
-                    Product::where('id', $productId)->update(['stock' => $totalStock]);
-                }
-
-                $ventasCreadas++;
 
                 $resultados[] = [
-                    'uuid' => $venta->uuid,
-                    'status' => 'creada',
-                    'venta_id' => $venta->id,
+                    'uuid' => $registrada['venta']->uuid,
+                    'status' => $registrada['status'],
+                    'venta_id' => $registrada['venta']->id,
                 ];
             }
         });
+
+        // Después del commit: el worker no puede leer un comprobante que todavía no existe.
+        foreach ($aAutorizar as $comprobante) {
+            AutorizarComprobante::dispatch($comprobante);
+        }
 
         return response()->json([
             'message' => "Se sincronizaron {$ventasCreadas} venta(s) correctamente.",

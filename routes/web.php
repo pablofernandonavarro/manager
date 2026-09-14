@@ -16,6 +16,7 @@ use App\Livewire\Configuration\ProductSettings;
 use App\Livewire\Configuration\Subgrupos;
 use App\Livewire\Configuration\Targets;
 use App\Livewire\Configuration\Temporadas;
+use App\Livewire\Facturacion\Comprobantes as FacturacionComprobantes;
 use App\Livewire\Facturacion\Configuracion as FacturacionConfiguracion;
 use App\Livewire\ListasPrecios\Buscador as ListasPreciosBuscador;
 use App\Livewire\ListasPrecios\Edit as ListasPreciosEdit;
@@ -143,6 +144,7 @@ Route::middleware('auth')->group(function () {
 
     // Facturación electrónica
     Route::get('/facturacion/configuracion', FacturacionConfiguracion::class)->middleware('can:facturacion.configurar')->name('facturacion.configuracion');
+    Route::get('/facturacion/comprobantes', FacturacionComprobantes::class)->middleware('can:facturacion.ver')->name('facturacion.comprobantes');
 
     // Reportes
     Route::get('/reportes/ventas', ReportesVentas::class)->middleware('can:reportes.ver')->name('reportes.ventas');

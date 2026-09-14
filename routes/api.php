@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\V1\PosAuthController;
 use App\Http\Controllers\Api\V1\PosComandosController;
 use App\Http\Controllers\Api\V1\PosDevolucionesController;
+use App\Http\Controllers\Api\V1\PosFacturasController;
 use App\Http\Controllers\Api\V1\PosProvisionController;
 use App\Http\Controllers\Api\V1\PosRemitosController;
 use App\Http\Controllers\Api\V1\PosTurnosController;
@@ -52,6 +53,11 @@ Route::prefix('v1')->group(function (): void {
         // Remitos que vienen en camino a la sucursal de la caja, y su recepción.
         Route::get('pos/remitos', [PosRemitosController::class, 'index']);
         Route::post('pos/remitos/{remito}/recibir', [PosRemitosController::class, 'recibir'])->whereNumber('remito');
+
+        // Facturación electrónica: la caja pide la factura al Manager, que habla con AFIP.
+        Route::get('pos/facturacion', [PosFacturasController::class, 'emisor']);
+        Route::post('pos/facturas', [PosFacturasController::class, 'facturar']);
+        Route::post('pos/comprobantes/estado', [PosFacturasController::class, 'estado']);
 
         // Actualización del código de la caja.
         Route::get('pos/version', [PosVersionController::class, 'actual']);
