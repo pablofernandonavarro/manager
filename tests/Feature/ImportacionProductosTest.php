@@ -185,23 +185,25 @@ class ImportacionProductosTest extends TestCase
     public function test_varios_lotes_con_un_modelo_repartido_entre_lotes(): void
     {
         $filas = [['modelo', 'codigo', 'nombre', 'color', 'talle', 'precio', 'stock Villa Bosh']];
-        for ($i = 1; $i <= 499; $i++) {
+        $porLote = ImportacionProductos::FILAS_POR_LOTE;
+        for ($i = 1; $i < $porLote; $i++) {
             $filas[] = [null, "S-{$i}", "Simple {$i}", null, null, 1000 + $i, 2];
         }
-        // Fila 501 (lote 1) y 502 (lote 2): mismo modelo.
+        // Última fila del lote 1 y primera del lote 2: mismo modelo.
         $filas[] = ['MOD-X', null, 'Modelo X', 'Negro', 'M', 5000, 1];
         $filas[] = ['MOD-X', null, 'Modelo X', 'Negro', 'L', 5000, 1];
+        $total = $porLote + 1;
 
         $importacion = $this->importar($this->excel($filas));
 
         $this->assertSame(ImportacionProducto::COMPLETADA, $importacion->estado);
         $this->assertSame(2, $importacion->lotes_total);
-        $this->assertSame([501, 501, 501, 0], [$importacion->total_filas, $importacion->filas_procesadas, $importacion->filas_exitosas, $importacion->filas_con_error]);
-        $this->assertSame([500, 1], ImportacionProductoLote::orderBy('lote')->pluck('procesadas')->all());
+        $this->assertSame([$total, $total, $total, 0], [$importacion->total_filas, $importacion->filas_procesadas, $importacion->filas_exitosas, $importacion->filas_con_error]);
+        $this->assertSame([$porLote, 1], ImportacionProductoLote::orderBy('lote')->pluck('procesadas')->all());
         $this->assertSame(1, Product::where('codigo_interno', 'MOD-X')->count());
         $this->assertSame(2, Product::where('parent_id', Product::where('codigo_interno', 'MOD-X')->value('id'))->count());
         $this->assertSame(1, AjusteInventario::count(), 'Un solo ajuste de Villa Bosh aunque la importación tenga 2 lotes');
-        $this->assertSame(501, AjusteInventario::sole()->lineas()->count());
+        $this->assertSame($total, AjusteInventario::sole()->lineas()->count());
     }
 
     public function test_un_reintento_de_un_lote_ya_aplicado_no_duplica_nada(): void

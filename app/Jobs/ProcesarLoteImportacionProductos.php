@@ -26,8 +26,11 @@ class ProcesarLoteImportacionProductos implements ShouldQueue
 
     public int $tries = 3;
 
-    /** 500 filas tardan del orden de 20-60 s; DB_QUEUE_RETRY_AFTER tiene que ser mayor. */
-    public int $timeout = 300;
+    /**
+     * 250 filas: ~10 s en la PC de desarrollo, hasta ~85 s en la e2-micro de producción.
+     * DB_QUEUE_RETRY_AFTER tiene que ser mayor (900 en producción).
+     */
+    public int $timeout = 600;
 
     public function __construct(
         public int $importacionId,

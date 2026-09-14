@@ -155,9 +155,9 @@ SESSION_SECURE_COOKIE=true
 BROADCAST_CONNECTION=log
 FILESYSTEM_DISK=local
 QUEUE_CONNECTION=database
-# Mayor que el timeout más largo de un job (lote de importación de productos: 300 s). Si no,
+# Mayor que el timeout más largo de un job (lote de importación de productos: 600 s). Si no,
 # la cola da el job por perdido mientras sigue corriendo y lo vuelve a ejecutar.
-DB_QUEUE_RETRY_AFTER=600
+DB_QUEUE_RETRY_AFTER=900
 CACHE_STORE=database
 MAIL_MAILER=log
 DOTENV

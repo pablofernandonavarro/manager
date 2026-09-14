@@ -44,7 +44,8 @@ class ImportacionProductos
 
     public const MAX_FILAS = 5000;
 
-    public const FILAS_POR_LOTE = 500;
+    /** En la e2-micro de producción 500 filas nuevas tardaron hasta 169 s; con 250, ~85 s. */
+    public const FILAS_POR_LOTE = 250;
 
     private const FILAS_POR_LECTURA = 1000;
 
