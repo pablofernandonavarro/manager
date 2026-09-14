@@ -120,8 +120,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/sucursales', SucursalesIndex::class)->name('sucursales.index');
     Route::get('/sucursales/listas-precios', SucursalesListasPrecios::class)->name('sucursales.listas-precios');
     Route::get('/sucursales/stock', SucursalesStock::class)->name('sucursales.stock');
-    Route::get('/sucursales/ajuste-stock', SucursalesAjusteStock::class)->name('sucursales.ajuste-stock');
-    Route::get('/sucursales/ajuste-stock/plantilla', [AjusteStockController::class, 'plantilla'])->name('sucursales.ajuste-stock.plantilla');
+    // Ajuste de inventario: pisa el stock de una sucursal.
+    Route::get('/sucursales/ajuste-stock', SucursalesAjusteStock::class)
+        ->middleware('can:stock.ajustar')->name('sucursales.ajuste-stock');
+    Route::get('/sucursales/ajuste-stock/plantilla', [AjusteStockController::class, 'plantilla'])
+        ->middleware('can:stock.ajustar')->name('sucursales.ajuste-stock.plantilla');
     // Remitos: mueven stock entre sucursales, por eso cada acción tiene su permiso.
     Route::get('/sucursales/remitos', SucursalesRemitos::class)
         ->middleware('can:remitos.ver')->name('sucursales.remitos');

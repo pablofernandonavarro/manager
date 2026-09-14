@@ -10,6 +10,7 @@ use App\Models\MovimientoStock;
 use App\Models\Product;
 use App\Models\StockSucursal;
 use App\Models\Sucursal;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -19,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class AjusteStock extends Component
 {
+    use AuthorizesRequests;
     use WithFileUploads;
 
     public ?int $sucursalId = null;
@@ -45,6 +47,8 @@ class AjusteStock extends Component
 
     public function mount(): void
     {
+        $this->authorize('stock.ajustar');
+
         // Defaultear a la primera sucursal NO central activa
         $this->sucursalId = Sucursal::where('activo', true)
             ->where('is_central', false)
@@ -107,6 +111,9 @@ class AjusteStock extends Component
 
     public function guardarBorrador(): void
     {
+        // Cada acción re-verifica: el permiso de la ruta solo protege la carga inicial.
+        $this->authorize('stock.ajustar');
+
         $this->validate(['sucursalId' => 'required|integer|exists:sucursales,id']);
 
         $stockActual = StockSucursal::where('sucursal_id', $this->sucursalId)
@@ -165,6 +172,9 @@ class AjusteStock extends Component
 
     public function aplicarAjuste(): void
     {
+        // Cada acción re-verifica: el permiso de la ruta solo protege la carga inicial.
+        $this->authorize('stock.ajustar');
+
         $this->validate(['sucursalId' => 'required|integer|exists:sucursales,id']);
 
         $stockActual = StockSucursal::where('sucursal_id', $this->sucursalId)
@@ -252,6 +262,9 @@ class AjusteStock extends Component
 
     public function descartarBorrador(): void
     {
+        // Cada acción re-verifica: el permiso de la ruta solo protege la carga inicial.
+        $this->authorize('stock.ajustar');
+
         if ($this->ajusteId) {
             AjusteInventario::find($this->ajusteId)?->delete();
         }
@@ -266,6 +279,9 @@ class AjusteStock extends Component
 
     public function updatedArchivo(): void
     {
+        // Cada acción re-verifica: el permiso de la ruta solo protege la carga inicial.
+        $this->authorize('stock.ajustar');
+
         $this->previsualizacion = [];
         $this->erroresImportacion = [];
 
@@ -353,6 +369,9 @@ class AjusteStock extends Component
 
     public function aplicarImportacion(): void
     {
+        // Cada acción re-verifica: el permiso de la ruta solo protege la carga inicial.
+        $this->authorize('stock.ajustar');
+
         if (empty($this->previsualizacion)) {
             return;
         }
