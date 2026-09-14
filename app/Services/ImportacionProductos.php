@@ -16,8 +16,11 @@ use App\Models\Sucursal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Csv;
+use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use Throwable;
 
 /**
  * Alta y actualización de productos desde Excel.
@@ -31,14 +34,19 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
  * ajuste de inventario, no una suma): subir dos veces el mismo archivo no duplica stock.
  * Celda vacía = no tocar.
  *
- * Primero `analizar()` (previsualización, sin escribir nada); `aplicar()` vuelve a analizar
- * el archivo y, si no hay errores, escribe todo en una transacción.
+ * El archivo nunca se carga entero: se lee por tramos de filas (filtro de lectura). La
+ * importación corre en la cola por lotes (App\Jobs\*ImportacionProductos): cada lote en su
+ * transacción y cada fila en un savepoint, así una fila con error no frena las demás.
  */
 class ImportacionProductos
 {
     public const COLUMNAS = ['modelo', 'codigo', 'nombre', 'color', 'talle', 'codigo_barras', 'precio', 'costo', 'iva'];
 
-    private const MAX_FILAS = 5000;
+    public const MAX_FILAS = 5000;
+
+    public const FILAS_POR_LOTE = 500;
+
+    private const FILAS_POR_LECTURA = 1000;
 
     private const IVAS = [0.0, 2.5, 5.0, 10.5, 21.0, 27.0];
 
@@ -96,203 +104,58 @@ class ImportacionProductos
     }
 
     /**
+     * Lo que se valida en el pedido web: encabezado y cantidad de filas, sin leer las celdas.
+     *
+     * @return array{errores: list<string>, ultima_fila: int, columnas_stock: bool}
+     */
+    public function inspeccionar(string $ruta): array
+    {
+        try {
+            $ultimaFila = $this->ultimaFila($ruta);
+            $estructura = $this->estructura($ruta);
+        } catch (Throwable $e) {
+            return ['errores' => ['No se pudo leer el archivo: '.$e->getMessage()], 'ultima_fila' => 0, 'columnas_stock' => false];
+        }
+
+        $errores = $estructura['errores'];
+
+        if ($ultimaFila < 2) {
+            $errores[] = 'El archivo está vacío o no tiene datos.';
+        } elseif ($ultimaFila - 1 > self::MAX_FILAS) {
+            $errores[] = 'El archivo tiene más de '.self::MAX_FILAS.' filas. Dividilo en partes.';
+        }
+
+        return ['errores' => $errores, 'ultima_fila' => $ultimaFila, 'columnas_stock' => $estructura['stock'] !== []];
+    }
+
+    /**
+     * Vista previa: las primeras filas con las mismas validaciones que la importación. No
+     * escribe nada.
+     *
      * @return array{filas: list<array<string, mixed>>, errores: list<string>, resumen: array<string, int>}
      */
-    public function analizar(string $ruta): array
+    public function analizar(string $ruta, int $limite = 300): array
     {
+        $inspeccion = $this->inspeccionar($ruta);
+
+        if ($inspeccion['errores']) {
+            return $this->resultado([], $inspeccion['errores']);
+        }
+
+        $estructura = $this->estructura($ruta);
+        $atributos = $this->atributosDeVariante();
+        $vistos = [];
+        $plan = [];
         $errores = [];
 
-        try {
-            $filas = IOFactory::load($ruta)->getSheet(0)->toArray(null, true, false, false);
-        } catch (\Throwable $e) {
-            return $this->resultado([], ['No se pudo leer el archivo: '.$e->getMessage()]);
-        }
+        foreach ($this->leerFilas($ruta, 2, $limite + 1) as $n => $fila) {
+            [$entrada, $erroresFila] = $this->validarFila($fila, $n, $estructura, $atributos);
+            $erroresFila = [...$erroresFila, ...$this->repetidaEnArchivo($fila, $n, $estructura, $vistos)];
 
-        $originales = array_map(fn ($h) => Str::squish((string) $h), array_shift($filas) ?? []);
-        $encabezados = array_map(fn ($h) => Str::lower($h), $originales);
-        $columnas = array_flip(array_filter($encabezados, fn ($h) => $h !== ''));
-
-        foreach (['nombre', 'precio'] as $obligatoria) {
-            if (! isset($columnas[$obligatoria])) {
-                $errores[] = "Falta la columna \"{$obligatoria}\". Descargá la plantilla.";
-            }
-        }
-        if (! isset($columnas['codigo']) && ! isset($columnas['modelo'])) {
-            $errores[] = 'Falta la columna "codigo" o "modelo". Descargá la plantilla.';
-        }
-
-        $sucursalesPorNombre = $this->sucursales()->keyBy(fn (Sucursal $s) => Str::lower($s->nombre));
-        $columnasStock = [];
-        foreach ($columnas as $encabezado => $indice) {
-            if (str_starts_with($encabezado, 'stock ')) {
-                $nombre = trim(substr($encabezado, 6));
-                $sucursal = $sucursalesPorNombre[$nombre] ?? null;
-                $sucursal
-                    ? $columnasStock[$indice] = $sucursal
-                    : $errores[] = "La columna \"{$originales[$indice]}\" no corresponde a ninguna sucursal activa.";
-            }
-        }
-
-        if ($errores) {
-            return $this->resultado([], $errores);
-        }
-
-        // Conserva las claves: fila de Excel = clave + 2 (encabezado y base 1).
-        $filas = array_filter($filas, fn ($f) => collect($f)->contains(fn ($v) => trim((string) $v) !== ''));
-
-        if (count($filas) > self::MAX_FILAS) {
-            return $this->resultado([], ['El archivo tiene más de '.self::MAX_FILAS.' filas. Dividilo en partes.']);
-        }
-
-        $productos = Product::withTrashed()->get(['id', 'product_type', 'parent_id', 'codigo_interno', 'codigo_barras', 'color', 'n_talle', 'nombre', 'deleted_at']);
-        $porCodigo = $productos->whereNull('deleted_at')->keyBy('codigo_interno');
-        $porBarras = $productos->whereNull('deleted_at')->filter(fn ($p) => filled($p->codigo_barras))->keyBy('codigo_barras');
-        $variantes = $productos->whereNull('deleted_at')->whereNotNull('parent_id')
-            ->keyBy(fn ($p) => $p->parent_id.'|'.Str::lower((string) $p->color).'|'.Str::lower((string) $p->n_talle));
-        $codigosEnUso = $productos->pluck('codigo_interno')->filter()->map(fn ($c) => Str::lower($c))->flip();
-
-        $plan = [];
-        $vistos = ['clave' => [], 'barras' => [], 'codigo' => []];
-
-        foreach ($filas as $i => $fila) {
-            $n = $i + 2;
-            $celda = fn (string $col) => isset($columnas[$col]) ? $this->texto($fila[$columnas[$col]] ?? null) : '';
-            $falla = function (string $mensaje) use (&$errores, $n): void {
-                $errores[] = "Fila {$n}: {$mensaje}";
-            };
-
-            $modelo = $celda('modelo');
-            $codigo = $celda('codigo');
-            $nombre = $celda('nombre');
-            $color = $celda('color');
-            $talle = $celda('talle');
-            $barras = $celda('codigo_barras');
-            $precio = $this->numero($celda('precio'));
-            $costo = $this->numero($celda('costo'));
-            $ivaCrudo = $celda('iva');
-            $iva = $ivaCrudo === '' ? null : $this->numero($ivaCrudo);
-            $erroresAntes = count($errores);
-
-            foreach (['precio' => [$celda('precio'), $precio], 'costo' => [$celda('costo'), $costo]] as $campo => [$crudo, $valor]) {
-                // $valor null con celda llena = no se pudo leer como número.
-                if ($crudo !== '' && ($valor === null || $valor < 0)) {
-                    $falla("{$campo} \"{$crudo}\" no es un número válido.");
-                }
-            }
-            if ($iva !== null && ! in_array($iva, self::IVAS, true)) {
-                $falla("iva \"{$ivaCrudo}\" tiene que ser 0, 2.5, 5, 10.5, 21 o 27.");
-            }
-            if ($barras !== '' && ! preg_match('/^\d{8,14}$/', $barras)) {
-                $falla("codigo_barras \"{$barras}\" tiene que tener entre 8 y 14 dígitos.");
-            }
-
-            $stock = [];
-            foreach ($columnasStock as $indice => $sucursal) {
-                $crudo = $this->texto($fila[$indice] ?? null);
-                if ($crudo === '') {
-                    continue;
-                }
-                $cantidad = $this->numero($crudo);
-                if ($cantidad === null || $cantidad < 0 || floor($cantidad) != $cantidad) {
-                    $falla("stock {$sucursal->nombre} \"{$crudo}\" tiene que ser un entero ≥ 0.");
-
-                    continue;
-                }
-                $stock[$sucursal->id] = (int) $cantidad;
-            }
-
-            $entrada = [
-                'fila' => $n, 'modelo' => $modelo, 'codigo' => $codigo, 'nombre' => $nombre, 'color' => $color,
-                'talle' => $talle, 'codigo_barras' => $barras, 'precio' => $precio, 'costo' => $costo, 'iva' => $iva,
-                'stock' => $stock, 'producto_id' => null, 'modelo_id' => null,
-            ];
-
-            if ($modelo !== '') {
-                if ($color === '' || $talle === '') {
-                    $falla("la variante del modelo {$modelo} necesita color y talle.");
-                }
-
-                $padre = $porCodigo[$modelo] ?? null;
-                if ($padre && $padre->product_type !== ProductType::CONFIGURABLE) {
-                    $falla("{$modelo} es un producto simple, no un modelo con variantes.");
-                    $padre = null;
-                }
-
-                $clave = Str::lower("{$modelo}|{$color}|{$talle}");
-                if (isset($vistos['clave'][$clave])) {
-                    $falla("{$modelo} {$color} / {$talle} ya está en la fila {$vistos['clave'][$clave]}.");
-                }
-                $vistos['clave'][$clave] = $n;
-
-                $existente = $padre ? ($variantes[$padre->id.'|'.Str::lower($color).'|'.Str::lower($talle)] ?? null) : null;
-                $entrada['tipo'] = 'variante';
-                $entrada['modelo_id'] = $padre?->id;
-                $entrada['producto_id'] = $existente?->id;
-                $entrada['accion'] = $existente ? 'actualizar' : 'crear';
-
-                if (! $padre && $nombre === '') {
-                    $falla("el modelo {$modelo} es nuevo: falta el nombre.");
-                }
-                if (! $existente && $codigo !== '' && isset($codigosEnUso[Str::lower($codigo)])) {
-                    $falla("el código {$codigo} ya lo usa otro producto.");
-                }
+            if ($erroresFila) {
+                array_push($errores, ...array_map(fn ($e) => "Fila {$n}: {$e}", $erroresFila));
             } else {
-                if ($codigo === '') {
-                    $falla('un producto simple necesita codigo (o completá modelo, color y talle si es una variante).');
-                }
-
-                $existente = $codigo !== '' ? ($porCodigo[$codigo] ?? null) : null;
-                if ($existente && ($existente->product_type === ProductType::CONFIGURABLE || $existente->parent_id)) {
-                    $falla("{$codigo} es un modelo o una variante: cargalo con las columnas modelo, color y talle.");
-                    $existente = null;
-                }
-
-                $entrada['tipo'] = 'simple';
-                $entrada['producto_id'] = $existente?->id;
-                $entrada['accion'] = $existente ? 'actualizar' : 'crear';
-
-                if (! $existente && $nombre === '') {
-                    $falla("{$codigo} es nuevo: falta el nombre.");
-                }
-            }
-
-            if ($entrada['accion'] === 'crear' && $precio === null) {
-                $falla('falta el precio para crear el producto.');
-            }
-
-            if ($codigo !== '') {
-                $claveCodigo = Str::lower($codigo);
-                if (isset($vistos['codigo'][$claveCodigo])) {
-                    $falla("el código {$codigo} ya está en la fila {$vistos['codigo'][$claveCodigo]}.");
-                }
-                $vistos['codigo'][$claveCodigo] = $n;
-            }
-
-            if ($barras !== '') {
-                $duenio = $porBarras[$barras] ?? null;
-                if ($duenio && $duenio->id !== $entrada['producto_id']) {
-                    $falla("el código de barras {$barras} ya es de {$duenio->codigo_interno}.");
-                }
-                if (isset($vistos['barras'][$barras])) {
-                    $falla("el código de barras {$barras} ya está en la fila {$vistos['barras'][$barras]}.");
-                }
-                $vistos['barras'][$barras] = $n;
-            }
-
-            if (count($errores) === $erroresAntes) {
                 $plan[] = $entrada;
-            }
-        }
-
-        if (! $plan && ! $errores) {
-            $errores[] = 'El archivo no tiene filas con datos.';
-        }
-
-        if (collect($plan)->contains(fn ($f) => $f['tipo'] === 'variante')) {
-            foreach (['color', 'talle'] as $slug) {
-                if (! AttributeType::where('slug', $slug)->whereNotNull('product_column')->exists()) {
-                    $errores[] = "Falta el atributo \"{$slug}\" en Configuración → Atributos.";
-                }
             }
         }
 
@@ -300,89 +163,286 @@ class ImportacionProductos
     }
 
     /**
-     * @return array{creados: int, actualizados: int, modelos: int, stock: int}
+     * Recorre todo el archivo por tramos: cuenta las filas con datos y marca las repetidas
+     * (misma variante, código o código de barras que una fila anterior). Esas filas son error.
      *
-     * @throws \RuntimeException si el archivo tiene errores
+     * @return array{total: int, ultima_fila: int, repetidas: array<int, array{codigo: ?string, mensaje: string, datos: array<string, string>}>}
      */
-    public function aplicar(string $ruta, ?int $usuarioId, string $nombreArchivo): array
+    public function repetidas(string $ruta): array
     {
-        $analisis = $this->analizar($ruta);
+        $estructura = $this->estructura($ruta);
+        $ultima = $this->ultimaFila($ruta);
+        $vistos = [];
+        $repetidas = [];
+        $total = 0;
 
-        if ($analisis['errores']) {
-            throw new \RuntimeException('El archivo tiene errores: corregilos y volvé a subirlo.');
+        for ($desde = 2; $desde <= $ultima; $desde += self::FILAS_POR_LECTURA) {
+            foreach ($this->leerFilas($ruta, $desde, min($ultima, $desde + self::FILAS_POR_LECTURA - 1)) as $n => $fila) {
+                $total++;
+
+                if ($mensajes = $this->repetidaEnArchivo($fila, $n, $estructura, $vistos)) {
+                    $repetidas[$n] = [
+                        'codigo' => $this->codigoDeFila($fila, $estructura),
+                        'mensaje' => implode(' ', $mensajes),
+                        'datos' => $this->datosDeFila($fila, $estructura),
+                    ];
+                }
+            }
         }
 
-        return DB::transaction(function () use ($analisis, $usuarioId, $nombreArchivo) {
-            $color = AttributeType::where('slug', 'color')->first();
-            $talle = AttributeType::where('slug', 'talle')->first();
-            $conteo = ['creados' => 0, 'actualizados' => 0, 'modelos' => 0, 'stock' => 0];
-            $stockPorProducto = [];
-            $filas = collect($analisis['filas']);
+        return ['total' => $total, 'ultima_fila' => $ultima, 'repetidas' => $repetidas];
+    }
 
-            foreach ($filas->where('tipo', 'simple') as $f) {
-                $producto = $this->guardarSimple($f);
-                $conteo[$f['accion'] === 'crear' ? 'creados' : 'actualizados']++;
-                $stockPorProducto[$producto->id] = $f['stock'];
+    /**
+     * Procesa las filas [$desde, $hasta] de Excel. Tiene que correr dentro de una transacción
+     * (la del lote): cada fila va en un savepoint y, si falla, se deshace solo esa fila.
+     *
+     * @param  array<int, bool>  $saltear  filas que ya tienen un error registrado (repetidas)
+     * @param  callable(int, ?string, string, array<string, string>): void  $registrarError
+     * @return array{procesadas: int, exitosas: int, errores: int, creados: int, actualizados: int, modelos: int, stock: int}
+     */
+    public function procesarLote(string $ruta, int $desde, int $hasta, array $saltear, callable $registrarError, ?int $usuarioId, string $referencia): array
+    {
+        $estructura = $this->estructura($ruta);
+        $atributos = $this->atributosDeVariante();
+        $conteo = ['procesadas' => 0, 'exitosas' => 0, 'errores' => 0, 'creados' => 0, 'actualizados' => 0, 'modelos' => 0, 'stock' => 0];
+        $ajustes = [];
+        $ajustesNuevos = [];
+
+        foreach ($this->leerFilas($ruta, $desde, $hasta) as $n => $fila) {
+            $conteo['procesadas']++;
+
+            if (isset($saltear[$n])) {
+                $conteo['errores']++;
+
+                continue;
             }
 
-            foreach ($filas->where('tipo', 'variante')->groupBy(fn ($f) => Str::lower($f['modelo'])) as $grupo) {
-                $primera = $grupo->first();
-                $padre = $primera['modelo_id'] ? Product::find($primera['modelo_id']) : null;
+            [$entrada, $errores] = $this->validarFila($fila, $n, $estructura, $atributos);
 
-                if (! $padre) {
-                    $padre = Product::create([
-                        'product_type' => ProductType::CONFIGURABLE,
-                        'codigo_interno' => $primera['modelo'],
-                        'nombre' => $primera['nombre'],
-                        'precio' => $primera['precio'] ?? 0,
-                        'publico' => $primera['precio'] ?? 0,
-                        'costo' => $primera['costo'] ?? 0,
-                        'iva' => $primera['iva'] ?? 21,
-                        'stock' => 0,
-                        'estado' => 1,
-                        'es_vendible' => false,
-                        'remitible' => true,
-                    ]);
-                    $conteo['modelos']++;
-                }
+            if ($errores) {
+                $registrarError($n, $this->codigoDeFila($fila, $estructura), implode(' ', array_map(fn ($e) => Str::ucfirst($e), $errores)), $this->datosDeFila($fila, $estructura));
+                $conteo['errores']++;
 
-                $this->asegurarValores($color, $grupo->pluck('color')->all());
-                $this->asegurarValores($talle, $grupo->pluck('talle')->all());
+                continue;
+            }
 
-                foreach ($grupo as $f) {
-                    $variante = $f['producto_id'] ? Product::find($f['producto_id']) : null;
-
-                    if (! $variante) {
-                        $variante = $this->configurables->addVariantsToConfigurable($padre->fresh(), [[
-                            'attributes' => [
-                                ['slug' => $color->slug, 'product_column' => $color->product_column, 'value' => $f['color']],
-                                ['slug' => $talle->slug, 'product_column' => $talle->product_column, 'value' => $f['talle']],
-                            ],
-                            'codigo_barras' => $f['codigo_barras'] ?: null,
-                        ]])->first();
-                        $conteo['creados']++;
-                    } else {
-                        $conteo['actualizados']++;
+            // El ajuste de cada sucursal se busca o crea fuera del savepoint de la fila: si la
+            // fila falla no se lleva el ajuste que usan las demás.
+            foreach (array_keys($entrada['stock']) as $sucursalId) {
+                if (! isset($ajustes[$sucursalId])) {
+                    $ajuste = AjusteInventario::where('sucursal_id', $sucursalId)->where('descripcion', $referencia)->first();
+                    if (! $ajuste) {
+                        $ajuste = AjusteInventario::create([
+                            'sucursal_id' => $sucursalId,
+                            'user_id' => $usuarioId,
+                            'descripcion' => $referencia,
+                            'estado' => EstadoAjuste::Aplicado,
+                            'aplicado_at' => now(),
+                        ]);
+                        $ajustesNuevos[] = $ajuste->id;
                     }
-
-                    $variante->fill(array_filter([
-                        'codigo_interno' => $f['accion'] === 'crear' && $f['codigo'] !== '' ? $f['codigo'] : null,
-                        'nombre' => $f['accion'] === 'actualizar' && $f['nombre'] !== '' ? "{$f['nombre']} - {$f['color']} - {$f['talle']}" : null,
-                        'codigo_barras' => $f['codigo_barras'] ?: null,
-                        'precio' => $f['precio'],
-                        'publico' => $f['precio'],
-                        'costo' => $f['costo'],
-                        'iva' => $f['iva'],
-                    ], fn ($v) => $v !== null))->fill(['es_vendible' => true])->save();
-
-                    $stockPorProducto[$variante->id] = $f['stock'];
+                    $ajustes[$sucursalId] = $ajuste->id;
                 }
             }
 
-            $conteo['stock'] = $this->aplicarStock($stockPorProducto, $usuarioId, "Importación de productos ({$nombreArchivo})");
+            try {
+                $resultado = DB::transaction(function () use ($entrada, $atributos, $ajustes, $referencia) {
+                    $guardado = $entrada['tipo'] === 'simple'
+                        ? ['producto' => $this->guardarSimple($entrada), 'modelo_nuevo' => false]
+                        : $this->guardarVariante($entrada, $atributos);
 
-            return $conteo;
-        });
+                    return $guardado + ['stock' => $this->aplicarStock($guardado['producto']->id, $entrada['stock'], $ajustes, $referencia)];
+                });
+            } catch (Throwable $e) {
+                report($e);
+                $registrarError($n, $this->codigoDeFila($fila, $estructura), 'No se pudo guardar la fila: '.Str::limit($e->getMessage(), 200), $this->datosDeFila($fila, $estructura));
+                $conteo['errores']++;
+
+                continue;
+            }
+
+            $conteo['exitosas']++;
+            $conteo[$entrada['accion'] === 'crear' ? 'creados' : 'actualizados']++;
+            $conteo['modelos'] += $resultado['modelo_nuevo'] ? 1 : 0;
+            $conteo['stock'] += $resultado['stock'];
+        }
+
+        // Un ajuste creado en este lote cuyas filas fallaron todas quedaría vacío.
+        if ($ajustesNuevos) {
+            AjusteInventario::whereIn('id', $ajustesNuevos)->whereDoesntHave('lineas')->delete();
+        }
+
+        return $conteo;
+    }
+
+    /**
+     * Validaciones de una fila, con el catálogo actual (incluye lo que ya creó este mismo
+     * lote: las consultas corren dentro de su transacción). No valida repetidas en el archivo.
+     *
+     * @param  list<mixed>  $fila
+     * @param  array{columnas: array<string, int>, stock: array<int, Sucursal>}  $estructura
+     * @param  array{color: ?AttributeType, talle: ?AttributeType}  $atributos
+     * @return array{0: array<string, mixed>, 1: list<string>}
+     */
+    private function validarFila(array $fila, int $n, array $estructura, array $atributos): array
+    {
+        $columnas = $estructura['columnas'];
+        $celda = fn (string $col) => isset($columnas[$col]) ? $this->texto($fila[$columnas[$col]] ?? null) : '';
+        $errores = [];
+
+        $modelo = $celda('modelo');
+        $codigo = $celda('codigo');
+        $nombre = $celda('nombre');
+        $color = $celda('color');
+        $talle = $celda('talle');
+        $barras = $celda('codigo_barras');
+        $precio = $this->numero($celda('precio'));
+        $costo = $this->numero($celda('costo'));
+        $ivaCrudo = $celda('iva');
+        $iva = $ivaCrudo === '' ? null : $this->numero($ivaCrudo);
+
+        foreach (['precio' => [$celda('precio'), $precio], 'costo' => [$celda('costo'), $costo]] as $campo => [$crudo, $valor]) {
+            // $valor null con celda llena = no se pudo leer como número.
+            if ($crudo !== '' && ($valor === null || $valor < 0)) {
+                $errores[] = "{$campo} \"{$crudo}\" no es un número válido.";
+            }
+        }
+        if ($iva !== null && ! in_array($iva, self::IVAS, true)) {
+            $errores[] = "iva \"{$ivaCrudo}\" tiene que ser 0, 2.5, 5, 10.5, 21 o 27.";
+        }
+        if ($barras !== '' && ! preg_match('/^\d{8,14}$/', $barras)) {
+            $errores[] = "codigo_barras \"{$barras}\" tiene que tener entre 8 y 14 dígitos.";
+        }
+
+        $stock = [];
+        foreach ($estructura['stock'] as $indice => $sucursal) {
+            $crudo = $this->texto($fila[$indice] ?? null);
+            if ($crudo === '') {
+                continue;
+            }
+            $cantidad = $this->numero($crudo);
+            if ($cantidad === null || $cantidad < 0 || floor($cantidad) != $cantidad) {
+                $errores[] = "stock {$sucursal->nombre} \"{$crudo}\" tiene que ser un entero ≥ 0.";
+
+                continue;
+            }
+            $stock[$sucursal->id] = (int) $cantidad;
+        }
+
+        $entrada = [
+            'fila' => $n, 'modelo' => $modelo, 'codigo' => $codigo, 'nombre' => $nombre, 'color' => $color,
+            'talle' => $talle, 'codigo_barras' => $barras, 'precio' => $precio, 'costo' => $costo, 'iva' => $iva,
+            'stock' => $stock, 'producto_id' => null, 'modelo_id' => null,
+        ];
+
+        if ($modelo !== '') {
+            if ($color === '' || $talle === '') {
+                $errores[] = "la variante del modelo {$modelo} necesita color y talle.";
+            }
+            if (! $atributos['color'] || ! $atributos['talle']) {
+                $errores[] = 'faltan los atributos "color" y "talle" en Configuración → Atributos.';
+            }
+
+            $padre = Product::where('codigo_interno', $modelo)->first();
+            if ($padre && $padre->product_type !== ProductType::CONFIGURABLE) {
+                $errores[] = "{$modelo} es un producto simple, no un modelo con variantes.";
+                $padre = null;
+            }
+
+            $existente = $padre && $color !== '' && $talle !== ''
+                ? Product::where('parent_id', $padre->id)->where('color', $color)->where('n_talle', $talle)->first()
+                : null;
+
+            $entrada['tipo'] = 'variante';
+            $entrada['modelo_id'] = $padre?->id;
+            $entrada['producto_id'] = $existente?->id;
+            $entrada['accion'] = $existente ? 'actualizar' : 'crear';
+
+            if (! $padre && $nombre === '') {
+                $errores[] = "el modelo {$modelo} es nuevo: falta el nombre.";
+            }
+            if (! $existente && $codigo !== '' && Product::withTrashed()->where('codigo_interno', $codigo)->exists()) {
+                $errores[] = "el código {$codigo} ya lo usa otro producto.";
+            }
+        } else {
+            if ($codigo === '') {
+                $errores[] = 'un producto simple necesita codigo (o completá modelo, color y talle si es una variante).';
+            }
+
+            $existente = $codigo !== '' ? Product::where('codigo_interno', $codigo)->first() : null;
+            if ($existente && ($existente->product_type === ProductType::CONFIGURABLE || $existente->parent_id)) {
+                $errores[] = "{$codigo} es un modelo o una variante: cargalo con las columnas modelo, color y talle.";
+                $existente = null;
+            }
+
+            $entrada['tipo'] = 'simple';
+            $entrada['producto_id'] = $existente?->id;
+            $entrada['accion'] = $existente ? 'actualizar' : 'crear';
+
+            if (! $existente && $nombre === '') {
+                $errores[] = "{$codigo} es nuevo: falta el nombre.";
+            }
+        }
+
+        if ($entrada['accion'] === 'crear' && $precio === null) {
+            $errores[] = 'falta el precio para crear el producto.';
+        }
+
+        if ($barras !== '') {
+            $duenio = Product::where('codigo_barras', $barras)->first(['id', 'codigo_interno']);
+            if ($duenio && $duenio->id !== $entrada['producto_id']) {
+                $errores[] = "el código de barras {$barras} ya es de {$duenio->codigo_interno}.";
+            }
+        }
+
+        return [$entrada, $errores];
+    }
+
+    /**
+     * @param  list<mixed>  $fila
+     * @param  array{columnas: array<string, int>}  $estructura
+     * @param  array<string, array<string, int>>  $vistos
+     * @return list<string>
+     */
+    private function repetidaEnArchivo(array $fila, int $n, array $estructura, array &$vistos): array
+    {
+        $columnas = $estructura['columnas'];
+        $celda = fn (string $col) => isset($columnas[$col]) ? $this->texto($fila[$columnas[$col]] ?? null) : '';
+        $modelo = $celda('modelo');
+        $codigo = $celda('codigo');
+        $barras = $celda('codigo_barras');
+        $mensajes = [];
+
+        if ($modelo !== '') {
+            $color = $celda('color');
+            $talle = $celda('talle');
+            $clave = Str::lower("{$modelo}|{$color}|{$talle}");
+            if (isset($vistos['clave'][$clave])) {
+                $mensajes[] = "{$modelo} {$color} / {$talle} ya está en la fila {$vistos['clave'][$clave]}.";
+            } else {
+                $vistos['clave'][$clave] = $n;
+            }
+        }
+
+        if ($codigo !== '') {
+            $claveCodigo = Str::lower($codigo);
+            if (isset($vistos['codigo'][$claveCodigo])) {
+                $mensajes[] = "el código {$codigo} ya está en la fila {$vistos['codigo'][$claveCodigo]}.";
+            } else {
+                $vistos['codigo'][$claveCodigo] = $n;
+            }
+        }
+
+        if ($barras !== '') {
+            if (isset($vistos['barras'][$barras])) {
+                $mensajes[] = "el código de barras {$barras} ya está en la fila {$vistos['barras'][$barras]}.";
+            } else {
+                $vistos['barras'][$barras] = $n;
+            }
+        }
+
+        return $mensajes;
     }
 
     /** @param  array<string, mixed>  $f */
@@ -411,80 +471,239 @@ class ImportacionProductos
     }
 
     /**
-     * Un ajuste de inventario por sucursal, igual que la pantalla de ajuste: queda en su
-     * historial y en los movimientos que ven las cajas.
-     *
-     * @param  array<int, array<int, int>>  $stockPorProducto  [product_id => [sucursal_id => cantidad]]
+     * @param  array<string, mixed>  $f
+     * @param  array{color: AttributeType, talle: AttributeType}  $atributos
+     * @return array{producto: Product, modelo_nuevo: bool}
      */
-    private function aplicarStock(array $stockPorProducto, ?int $usuarioId, string $referencia): int
+    private function guardarVariante(array $f, array $atributos): array
     {
-        $porSucursal = [];
-        foreach ($stockPorProducto as $productoId => $cantidades) {
-            foreach ($cantidades as $sucursalId => $cantidad) {
-                $porSucursal[$sucursalId][$productoId] = $cantidad;
-            }
+        $padre = $f['modelo_id'] ? Product::find($f['modelo_id']) : null;
+        $modeloNuevo = false;
+
+        if (! $padre) {
+            $padre = Product::create([
+                'product_type' => ProductType::CONFIGURABLE,
+                'codigo_interno' => $f['modelo'],
+                'nombre' => $f['nombre'],
+                'precio' => $f['precio'] ?? 0,
+                'publico' => $f['precio'] ?? 0,
+                'costo' => $f['costo'] ?? 0,
+                'iva' => $f['iva'] ?? 21,
+                'stock' => 0,
+                'estado' => 1,
+                'es_vendible' => false,
+                'remitible' => true,
+            ]);
+            $modeloNuevo = true;
         }
 
+        $this->asegurarValor($atributos['color'], $f['color']);
+        $this->asegurarValor($atributos['talle'], $f['talle']);
+
+        $variante = $f['producto_id'] ? Product::find($f['producto_id']) : null;
+
+        if (! $variante) {
+            $variante = $this->configurables->addVariantsToConfigurable($padre, [[
+                'attributes' => [
+                    ['slug' => $atributos['color']->slug, 'product_column' => $atributos['color']->product_column, 'value' => $f['color']],
+                    ['slug' => $atributos['talle']->slug, 'product_column' => $atributos['talle']->product_column, 'value' => $f['talle']],
+                ],
+                'codigo_barras' => $f['codigo_barras'] ?: null,
+            ]])->first();
+        }
+
+        $variante->fill(array_filter([
+            'codigo_interno' => $f['accion'] === 'crear' && $f['codigo'] !== '' ? $f['codigo'] : null,
+            'nombre' => $f['accion'] === 'actualizar' && $f['nombre'] !== '' ? "{$f['nombre']} - {$f['color']} - {$f['talle']}" : null,
+            'codigo_barras' => $f['codigo_barras'] ?: null,
+            'precio' => $f['precio'],
+            'publico' => $f['precio'],
+            'costo' => $f['costo'],
+            'iva' => $f['iva'],
+        ], fn ($v) => $v !== null))->fill(['es_vendible' => true])->save();
+
+        return ['producto' => $variante, 'modelo_nuevo' => $modeloNuevo];
+    }
+
+    /**
+     * Deja el stock de cada sucursal en la cantidad del archivo, como una línea del ajuste de
+     * inventario de esta importación. Cantidad igual a la actual = no se toca (por eso un
+     * reintento no genera movimientos de más).
+     *
+     * @param  array<int, int>  $cantidades  [sucursal_id => cantidad]
+     * @param  array<int, int>  $ajustes  [sucursal_id => ajuste_inventario_id]
+     */
+    private function aplicarStock(int $productoId, array $cantidades, array $ajustes, string $referencia): int
+    {
         $cambios = 0;
 
-        foreach ($porSucursal as $sucursalId => $cantidades) {
-            $actuales = StockSucursal::where('sucursal_id', $sucursalId)->whereIn('product_id', array_keys($cantidades))->pluck('cantidad', 'product_id');
-            $ajuste = null;
+        foreach ($cantidades as $sucursalId => $nueva) {
+            $anterior = (int) StockSucursal::where('sucursal_id', $sucursalId)->where('product_id', $productoId)->value('cantidad');
 
-            foreach ($cantidades as $productoId => $nueva) {
-                $anterior = (int) ($actuales[$productoId] ?? 0);
-                if ($nueva === $anterior) {
-                    continue;
-                }
-
-                $ajuste ??= AjusteInventario::create([
-                    'sucursal_id' => $sucursalId,
-                    'user_id' => $usuarioId,
-                    'descripcion' => $referencia,
-                    'estado' => EstadoAjuste::Aplicado,
-                    'aplicado_at' => now(),
-                ]);
-
-                AjusteInventarioLinea::create([
-                    'ajuste_inventario_id' => $ajuste->id,
-                    'product_id' => $productoId,
-                    'cantidad_anterior' => $anterior,
-                    'cantidad_nueva' => $nueva,
-                    'delta' => $nueva - $anterior,
-                ]);
-
-                StockSucursal::updateOrCreate(['sucursal_id' => $sucursalId, 'product_id' => $productoId], ['cantidad' => $nueva]);
-
-                MovimientoStock::create([
-                    'ajuste_inventario_id' => $ajuste->id,
-                    'sucursal_id' => $sucursalId,
-                    'product_id' => $productoId,
-                    'tipo' => TipoMovimiento::Ajuste,
-                    'cantidad' => $nueva - $anterior,
-                    'referencia' => $referencia,
-                    'fecha' => now(),
-                ]);
-
-                Product::whereKey($productoId)->update(['stock' => StockSucursal::where('product_id', $productoId)->sum('cantidad')]);
-                $cambios++;
+            if ($nueva === $anterior) {
+                continue;
             }
+
+            AjusteInventarioLinea::create([
+                'ajuste_inventario_id' => $ajustes[$sucursalId],
+                'product_id' => $productoId,
+                'cantidad_anterior' => $anterior,
+                'cantidad_nueva' => $nueva,
+                'delta' => $nueva - $anterior,
+            ]);
+
+            StockSucursal::updateOrCreate(['sucursal_id' => $sucursalId, 'product_id' => $productoId], ['cantidad' => $nueva]);
+
+            MovimientoStock::create([
+                'ajuste_inventario_id' => $ajustes[$sucursalId],
+                'sucursal_id' => $sucursalId,
+                'product_id' => $productoId,
+                'tipo' => TipoMovimiento::Ajuste,
+                'cantidad' => $nueva - $anterior,
+                'referencia' => $referencia,
+                'fecha' => now(),
+            ]);
+
+            $cambios++;
+        }
+
+        if ($cambios) {
+            Product::whereKey($productoId)->update(['stock' => StockSucursal::where('product_id', $productoId)->sum('cantidad')]);
         }
 
         return $cambios;
     }
 
-    /** @param  list<string>  $valores */
-    private function asegurarValores(AttributeType $tipo, array $valores): void
+    private function asegurarValor(AttributeType $tipo, string $valor): void
     {
-        $existentes = AttributeValue::where('attribute_type_id', $tipo->id)->pluck('valor')->map(fn ($v) => Str::lower($v))->flip();
-        $orden = (int) AttributeValue::where('attribute_type_id', $tipo->id)->max('orden');
+        $existe = AttributeValue::where('attribute_type_id', $tipo->id)->where('valor', $valor)->exists();
 
-        foreach (array_unique($valores) as $valor) {
-            if (! isset($existentes[Str::lower($valor)])) {
-                AttributeValue::create(['attribute_type_id' => $tipo->id, 'valor' => $valor, 'orden' => ++$orden, 'activo' => true]);
-                $existentes[Str::lower($valor)] = true;
+        if (! $existe) {
+            AttributeValue::create([
+                'attribute_type_id' => $tipo->id,
+                'valor' => $valor,
+                'orden' => (int) AttributeValue::where('attribute_type_id', $tipo->id)->max('orden') + 1,
+                'activo' => true,
+            ]);
+        }
+    }
+
+    /** @return array{color: ?AttributeType, talle: ?AttributeType} */
+    private function atributosDeVariante(): array
+    {
+        $tipos = AttributeType::whereIn('slug', ['color', 'talle'])->whereNotNull('product_column')->get()->keyBy('slug');
+
+        return ['color' => $tipos['color'] ?? null, 'talle' => $tipos['talle'] ?? null];
+    }
+
+    /**
+     * Columnas del encabezado (fila 1) y columnas de stock por sucursal.
+     *
+     * @return array{columnas: array<string, int>, stock: array<int, Sucursal>, errores: list<string>}
+     */
+    private function estructura(string $ruta): array
+    {
+        $encabezado = $this->leerFilas($ruta, 1, 1)[1] ?? [];
+        $originales = array_map(fn ($h) => Str::squish((string) $h), $encabezado);
+        $columnas = array_flip(array_filter(array_map(fn ($h) => Str::lower($h), $originales), fn ($h) => $h !== ''));
+        $errores = [];
+
+        foreach (['nombre', 'precio'] as $obligatoria) {
+            if (! isset($columnas[$obligatoria])) {
+                $errores[] = "Falta la columna \"{$obligatoria}\". Descargá la plantilla.";
             }
         }
+        if (! isset($columnas['codigo']) && ! isset($columnas['modelo'])) {
+            $errores[] = 'Falta la columna "codigo" o "modelo". Descargá la plantilla.';
+        }
+
+        $sucursalesPorNombre = $this->sucursales()->keyBy(fn (Sucursal $s) => Str::lower($s->nombre));
+        $stock = [];
+        foreach ($columnas as $encabezadoColumna => $indice) {
+            if (str_starts_with($encabezadoColumna, 'stock ')) {
+                $sucursal = $sucursalesPorNombre[trim(substr($encabezadoColumna, 6))] ?? null;
+                $sucursal
+                    ? $stock[$indice] = $sucursal
+                    : $errores[] = "La columna \"{$originales[$indice]}\" no corresponde a ninguna sucursal activa.";
+            }
+        }
+
+        return ['columnas' => $columnas, 'stock' => $stock, 'errores' => $errores];
+    }
+
+    private function ultimaFila(string $ruta): int
+    {
+        $info = IOFactory::createReaderForFile($ruta)->listWorksheetInfo($ruta);
+
+        return (int) ($info[0]['totalRows'] ?? 0);
+    }
+
+    /**
+     * Lee solo las filas [$desde, $hasta] de la primera hoja, sin cargar el resto del archivo.
+     *
+     * @return array<int, list<mixed>> fila de Excel => celdas (A = 0); sin las filas vacías
+     */
+    private function leerFilas(string $ruta, int $desde, int $hasta): array
+    {
+        $lector = IOFactory::createReaderForFile($ruta);
+        $lector->setReadDataOnly(true);
+        $lector->setReadFilter(new class($desde, $hasta) implements IReadFilter
+        {
+            public function __construct(private int $desde, private int $hasta) {}
+
+            public function readCell(string $columnAddress, int $row, string $worksheetName = ''): bool
+            {
+                return $row >= $this->desde && $row <= $this->hasta;
+            }
+        });
+
+        if (! $lector instanceof Csv) {
+            $lector->setLoadSheetsOnly([$lector->listWorksheetNames($ruta)[0]]);
+        }
+
+        $libro = $lector->load($ruta);
+        $hoja = $libro->getSheet(0);
+        $celdas = $hoja->rangeToArray("A{$desde}:{$hoja->getHighestColumn()}{$hasta}", null, true, false, false);
+        $libro->disconnectWorksheets();
+        unset($libro, $hoja);
+
+        $filas = [];
+        foreach ($celdas as $i => $fila) {
+            if (collect($fila)->contains(fn ($v) => trim((string) $v) !== '')) {
+                $filas[$desde + $i] = $fila;
+            }
+        }
+
+        return $filas;
+    }
+
+    /** @param  list<mixed>  $fila */
+    private function codigoDeFila(array $fila, array $estructura): ?string
+    {
+        foreach (['codigo', 'modelo'] as $col) {
+            if (isset($estructura['columnas'][$col]) && ($valor = $this->texto($fila[$estructura['columnas'][$col]] ?? null)) !== '') {
+                return Str::limit($valor, 100, '');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  list<mixed>  $fila
+     * @return array<string, string>
+     */
+    private function datosDeFila(array $fila, array $estructura): array
+    {
+        $datos = [];
+        foreach ($estructura['columnas'] as $nombre => $indice) {
+            $valor = $this->texto($fila[$indice] ?? null);
+            if ($valor !== '') {
+                $datos[$nombre] = Str::limit($valor, 120);
+            }
+        }
+
+        return $datos;
     }
 
     /** @return \Illuminate\Support\Collection<int, Sucursal> */

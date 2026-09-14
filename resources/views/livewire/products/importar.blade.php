@@ -23,38 +23,89 @@
 
     @if($importaciones->isNotEmpty())
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" @if($hayEnCurso) wire:poll.3s @endif>
-            <div class="px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+            <div class="px-6 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
                 <h2 class="text-sm font-semibold text-gray-900">Importaciones recientes</h2>
                 @if($hayEnCurso)
-                    <span class="text-xs text-gray-500">Se procesan en segundo plano: podés cerrar esta página.</span>
+                    <span class="inline-flex items-center gap-2 text-xs font-medium text-blue-700">
+                        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        La importación continúa en segundo plano. Podés salir de esta pantalla sin cancelarla.
+                    </span>
                 @endif
             </div>
             <div class="divide-y divide-gray-100">
                 @foreach($importaciones as $imp)
-                    <div class="px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" wire:key="imp-{{ $imp->id }}">
-                        @php
-                            $badge = [
-                                'pendiente' => ['bg-gray-100 text-gray-700', 'En cola'],
-                                'procesando' => ['bg-blue-100 text-blue-800', 'Procesando…'],
-                                'terminada' => ['bg-green-100 text-green-800', 'Terminada'],
-                                'fallida' => ['bg-red-100 text-red-800', 'Falló'],
-                            ][$imp->estado] ?? ['bg-gray-100 text-gray-700', $imp->estado];
-                        @endphp
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $badge[0] }}">{{ $badge[1] }}</span>
-                        <span class="font-medium text-gray-900">{{ $imp->nombre_original }}</span>
-                        <span class="text-gray-500">{{ number_format($imp->filas, 0, ',', '.') }} filas</span>
-                        <span class="text-gray-400">{{ $imp->user?->name }} · {{ $imp->created_at->timezone(config('app.display_timezone'))->format('d/m H:i') }}</span>
-                        <span class="basis-full sm:basis-auto sm:ml-auto text-gray-600">
-                            @if($imp->estado === 'terminada' && $imp->resultado)
-                                {{ $imp->resultado['creados'] }} creados · {{ $imp->resultado['actualizados'] }} actualizados ·
-                                {{ $imp->resultado['modelos'] }} modelos nuevos · {{ $imp->resultado['stock'] }} cambios de stock
-                                <span class="text-gray-400">· {{ $imp->iniciado_at?->diffInMinutes($imp->terminado_at) < 1 ? 'menos de 1 min' : (int) $imp->iniciado_at?->diffInMinutes($imp->terminado_at).' min' }}</span>
-                            @elseif($imp->estado === 'fallida')
-                                <span class="text-red-700">{{ $imp->error }} No se guardó nada.</span>
-                            @elseif($imp->estado === 'procesando')
-                                desde {{ $imp->iniciado_at?->timezone(config('app.display_timezone'))->format('H:i') }} · 5.000 filas tardan unos minutos
+                    @php
+                        [$claseEstado, $textoEstado] = [
+                            'pendiente' => ['bg-gray-100 text-gray-700', 'En cola'],
+                            'procesando' => ['bg-blue-100 text-blue-800', 'Procesando'],
+                            'completada' => ['bg-green-100 text-green-800', 'Completada'],
+                            'completada_con_errores' => ['bg-amber-100 text-amber-800', 'Completada con errores'],
+                            'fallida' => ['bg-red-100 text-red-800', 'Fallida'],
+                        ][$imp->estado] ?? ['bg-gray-100 text-gray-700', $imp->estado];
+                        $porcentaje = $imp->porcentaje();
+                    @endphp
+                    <div class="px-6 py-4 space-y-2" wire:key="imp-{{ $imp->id }}">
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $claseEstado }}">{{ $textoEstado }}</span>
+                            <span class="font-medium text-gray-900">{{ $imp->nombre_original }}</span>
+                            <span class="text-gray-400">#{{ $imp->id }} · {{ $imp->user?->name }} · {{ $imp->created_at->timezone(config('app.display_timezone'))->format('d/m H:i') }}</span>
+                            <span class="ml-auto text-sm font-semibold tabular-nums text-gray-700">{{ $porcentaje }}%</span>
+                        </div>
+
+                        <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-500 {{ $imp->estado === 'fallida' ? 'bg-red-500' : ($imp->filas_con_error > 0 ? 'bg-amber-500' : 'bg-green-500') }}"
+                                 style="width: {{ $porcentaje }}%"></div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600 tabular-nums">
+                            <span>Total: <strong class="text-gray-900">{{ number_format($imp->total_filas, 0, ',', '.') }}</strong></span>
+                            <span>Procesadas: <strong class="text-gray-900">{{ number_format($imp->filas_procesadas, 0, ',', '.') }}</strong></span>
+                            <span>Exitosas: <strong class="text-green-700">{{ number_format($imp->filas_exitosas, 0, ',', '.') }}</strong></span>
+                            <span>Con error: <strong class="{{ $imp->filas_con_error ? 'text-red-700' : 'text-gray-900' }}">{{ number_format($imp->filas_con_error, 0, ',', '.') }}</strong></span>
+                            @if($imp->filas_exitosas)
+                                <span class="text-gray-400">{{ $imp->creados }} creados · {{ $imp->actualizados }} actualizados · {{ $imp->modelos_nuevos }} modelos nuevos · {{ $imp->cambios_stock }} cambios de stock</span>
                             @endif
-                        </span>
+                            @if($imp->finalizado_at && $imp->iniciado_at)
+                                <span class="text-gray-400">{{ max(1, (int) ceil($imp->iniciado_at->diffInSeconds($imp->finalizado_at) / 60)) }} min</span>
+                            @endif
+                        </div>
+
+                        @if($imp->mensaje)
+                            <p class="text-xs {{ $imp->estado === 'fallida' ? 'text-red-700' : 'text-gray-600' }}">{{ $imp->mensaje }}</p>
+                        @endif
+
+                        @if($imp->filas_con_error > 0)
+                            <button type="button" wire:click="alternarErrores({{ $imp->id }})" class="text-xs font-medium text-blue-600 hover:text-blue-800">
+                                {{ $verErroresDe === $imp->id ? 'Ocultar errores' : 'Ver filas con error' }}
+                            </button>
+                            @if($verErroresDe === $imp->id)
+                                <div class="max-h-80 overflow-auto rounded-lg border border-gray-200">
+                                    <table class="min-w-full text-xs">
+                                        <thead class="bg-gray-50 sticky top-0">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left font-medium text-gray-500">Fila</th>
+                                                <th class="px-3 py-2 text-left font-medium text-gray-500">Código</th>
+                                                <th class="px-3 py-2 text-left font-medium text-gray-500">Error</th>
+                                                <th class="px-3 py-2 text-left font-medium text-gray-500">Datos</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            @foreach($erroresDeImportacion as $error)
+                                                <tr wire:key="err-{{ $error->id }}">
+                                                    <td class="px-3 py-1.5 tabular-nums text-gray-500">{{ $error->fila }}</td>
+                                                    <td class="px-3 py-1.5 font-mono text-gray-700">{{ $error->codigo }}</td>
+                                                    <td class="px-3 py-1.5 text-red-700">{{ $error->mensaje }}</td>
+                                                    <td class="px-3 py-1.5 text-gray-500">{{ collect($error->datos)->map(fn ($v, $k) => "{$k}: {$v}")->implode(' · ') }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                    @if($imp->filas_con_error > $erroresDeImportacion->count())
+                                        <p class="px-3 py-2 text-xs text-gray-500 border-t border-gray-200">Se muestran {{ $erroresDeImportacion->count() }} de {{ $imp->filas_con_error }}.</p>
+                                    @endif
+                                </div>
+                            @endif
+                        @endif
                     </div>
                 @endforeach
             </div>
@@ -83,21 +134,35 @@
     @if($totalFilas > 0)
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-                <p class="text-sm text-gray-700">
-                    <strong>{{ $resumen['crear'] }}</strong> para crear ·
-                    <strong>{{ $resumen['actualizar'] }}</strong> para actualizar ·
-                    <strong>{{ $resumen['modelos_nuevos'] }}</strong> modelo(s) nuevos ·
-                    <strong>{{ $resumen['con_stock'] }}</strong> con stock
-                </p>
+                <div class="text-sm text-gray-700">
+                    <p><strong>{{ number_format($totalFilas, 0, ',', '.') }}</strong> filas en el archivo.</p>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        En las primeras {{ count($previa) + count($avisos) }}: {{ $resumen['crear'] ?? 0 }} para crear ·
+                        {{ $resumen['actualizar'] ?? 0 }} para actualizar · {{ $resumen['modelos_nuevos'] ?? 0 }} modelos nuevos ·
+                        {{ $resumen['con_stock'] ?? 0 }} con stock
+                    </p>
+                </div>
                 <div class="flex gap-2">
                     <button type="button" wire:click="descartar" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Descartar</button>
                     <button type="button" wire:click="aplicar" wire:loading.attr="disabled" @disabled($errores)
                             class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span wire:loading.remove wire:target="aplicar">Aplicar importación</span>
-                        <span wire:loading wire:target="aplicar">Encolando…</span>
+                        <span wire:loading.remove wire:target="aplicar">Importar {{ number_format($totalFilas, 0, ',', '.') }} filas</span>
+                        <span wire:loading wire:target="aplicar">Enviando…</span>
                     </button>
                 </div>
             </div>
+
+            @if($avisos)
+                <div class="px-6 py-3 bg-amber-50 border-b border-amber-200">
+                    <p class="text-xs font-semibold text-amber-800 mb-1">Estas filas van a quedar con error; el resto se importa igual:</p>
+                    <ul class="list-disc ml-5 text-xs text-amber-800 space-y-0.5 max-h-40 overflow-y-auto">
+                        @foreach($avisos as $aviso)
+                            <li>{{ $aviso }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
@@ -130,7 +195,7 @@
                 </table>
             </div>
             @if($totalFilas > count($previa))
-                <p class="px-6 py-3 text-xs text-gray-500 border-t border-gray-200">Se muestran {{ count($previa) }} de {{ $totalFilas }} filas; se importan todas.</p>
+                <p class="px-6 py-3 text-xs text-gray-500 border-t border-gray-200">Vista previa de las primeras filas; se importan las {{ number_format($totalFilas, 0, ',', '.') }}.</p>
             @endif
         </div>
     @endif

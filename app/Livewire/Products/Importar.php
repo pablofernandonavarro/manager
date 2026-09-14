@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Products;
 
-use App\Jobs\ImportarProductos;
+use App\Jobs\PrepararImportacionProductos;
 use App\Models\ImportacionProducto;
 use App\Models\Sucursal;
 use App\Services\ImportacionProductos;
@@ -13,7 +13,11 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 
 /**
- * Alta y actualización masiva de productos desde Excel: subir → previsualizar → aplicar.
+ * Importación de productos desde Excel: subir → vista previa → encolar.
+ *
+ * El pedido web solo valida el archivo (encabezado y cantidad de filas), lo guarda, crea el
+ * registro y encola. Las filas se procesan en la cola por lotes; esta pantalla muestra el
+ * progreso con polling y se puede cerrar sin cortar la importación.
  */
 class Importar extends Component
 {
@@ -28,11 +32,16 @@ class Importar extends Component
 
     public int $totalFilas = 0;
 
-    /** @var list<string> */
+    /** @var list<string> Errores que impiden importar (encabezado, tamaño, permisos). */
     public array $errores = [];
+
+    /** @var list<string> Filas de la vista previa que van a quedar con error. */
+    public array $avisos = [];
 
     /** @var array<string, int> */
     public array $resumen = [];
+
+    public ?int $verErroresDe = null;
 
     public function mount(): void
     {
@@ -43,25 +52,26 @@ class Importar extends Component
     {
         $this->authorize('productos.crear');
 
-        $this->reset(['previa', 'totalFilas', 'errores', 'resumen']);
+        $this->reset(['previa', 'totalFilas', 'errores', 'avisos', 'resumen']);
         $this->validate(['archivo' => 'required|file|mimes:xlsx,xls,csv|max:10240'], [
             'archivo.mimes' => 'Subí un archivo Excel (.xlsx o .xls) o CSV.',
             'archivo.max' => 'El archivo no puede pesar más de 10 MB.',
         ]);
 
-        $analisis = $importacion->analizar($this->archivo->getRealPath());
+        $inspeccion = $importacion->inspeccionar($this->archivo->getRealPath());
+        $this->errores = [...$inspeccion['errores'], ...$this->erroresDePermiso($inspeccion['columnas_stock'])];
 
-        $this->errores = [...$analisis['errores'], ...$this->erroresDePermiso($analisis['resumen'])];
+        if ($this->errores) {
+            return;
+        }
+
+        $analisis = $importacion->analizar($this->archivo->getRealPath(), self::FILAS_VISIBLES);
+        $this->avisos = $analisis['errores'];
         $this->resumen = $analisis['resumen'];
-        $this->totalFilas = count($analisis['filas']);
-        $this->previa = array_slice($analisis['filas'], 0, self::FILAS_VISIBLES);
+        $this->previa = $analisis['filas'];
+        $this->totalFilas = $inspeccion['ultima_fila'] - 1;
     }
 
-    /**
-     * Encola la importación: miles de filas tardan minutos, más que el límite de un pedido
-     * web. El job vuelve a analizar el archivo al correr (la previsualización es solo para
-     * mostrar, y entre medio pudo cambiar el catálogo).
-     */
     public function aplicar(ImportacionProductos $importacion): void
     {
         $this->authorize('productos.crear');
@@ -70,9 +80,9 @@ class Importar extends Component
             return;
         }
 
-        $analisis = $importacion->analizar($this->archivo->getRealPath());
-        if ($analisis['errores'] || $this->erroresDePermiso($analisis['resumen'])) {
-            $this->errores = [...$analisis['errores'], ...$this->erroresDePermiso($analisis['resumen'])];
+        $inspeccion = $importacion->inspeccionar($this->archivo->getRealPath());
+        if ($errores = [...$inspeccion['errores'], ...$this->erroresDePermiso($inspeccion['columnas_stock'])]) {
+            $this->errores = $errores;
 
             return;
         }
@@ -85,27 +95,31 @@ class Importar extends Component
             'archivo' => $ruta,
             'nombre_original' => mb_substr($this->archivo->getClientOriginalName(), 0, 255),
             'estado' => ImportacionProducto::PENDIENTE,
-            'filas' => count($analisis['filas']),
-            'resumen' => $analisis['resumen'],
+            // Provisorio: el paso de preparación cuenta las filas con datos.
+            'total_filas' => max(0, $inspeccion['ultima_fila'] - 1),
+            'resumen' => $this->resumen ?: null,
         ]);
 
-        ImportarProductos::dispatch($registro->id);
+        PrepararImportacionProductos::dispatch($registro->id);
 
-        $this->reset(['archivo', 'previa', 'totalFilas', 'errores', 'resumen']);
+        $this->reset(['archivo', 'previa', 'totalFilas', 'errores', 'avisos', 'resumen']);
+        $this->verErroresDe = null;
     }
 
     public function descartar(): void
     {
-        $this->reset(['archivo', 'previa', 'totalFilas', 'errores', 'resumen']);
+        $this->reset(['archivo', 'previa', 'totalFilas', 'errores', 'avisos', 'resumen']);
     }
 
-    /**
-     * @param  array<string, int>  $resumen
-     * @return list<string>
-     */
-    private function erroresDePermiso(array $resumen): array
+    public function alternarErrores(int $importacionId): void
     {
-        return ($resumen['con_stock'] ?? 0) > 0 && ! auth()->user()->can('stock.ajustar')
+        $this->verErroresDe = $this->verErroresDe === $importacionId ? null : $importacionId;
+    }
+
+    /** @return list<string> */
+    private function erroresDePermiso(bool $columnasStock): array
+    {
+        return $columnasStock && ! auth()->user()->can('stock.ajustar')
             ? ['El archivo trae columnas de stock y no tenés permiso para ajustar stock. Borrá esas columnas o pedí el permiso.']
             : [];
     }
@@ -113,12 +127,15 @@ class Importar extends Component
     #[Layout('layouts.app')]
     public function render(): mixed
     {
-        $importaciones = ImportacionProducto::with('user:id,name')->latest()->limit(8)->get();
+        $importaciones = ImportacionProducto::with('user:id,name')->latest('id')->limit(8)->get();
 
         return view('livewire.products.importar', [
             'sucursales' => Sucursal::where('activo', true)->pluck('nombre', 'id'),
             'importaciones' => $importaciones,
             'hayEnCurso' => $importaciones->contains(fn (ImportacionProducto $i) => $i->enCurso()),
+            'erroresDeImportacion' => $this->verErroresDe
+                ? ImportacionProducto::find($this->verErroresDe)?->errores()->orderBy('fila')->limit(200)->get() ?? collect()
+                : collect(),
         ]);
     }
 }
