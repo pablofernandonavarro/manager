@@ -86,7 +86,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
         // Los que las migraciones de módulos le dan al supervisor, por la misma razón.
         $supervisorRole->givePermissionTo(Permission::where('guard_name', 'web')->whereIn('name', [
-            'terminales.ver', 'remitos.ver', 'remitos.recibir', 'cajas.ver', 'reportes.ver', 'facturacion.ver', 'clientes.gestionar',
+            'terminales.ver', 'remitos.ver', 'remitos.crear', 'remitos.recibir', 'cajas.ver', 'reportes.ver', 'facturacion.ver', 'clientes.gestionar',
         ])->get());
         $this->command->info('Rol supervisor creado con '.$supervisorRole->permissions->count().' permisos');
 

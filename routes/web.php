@@ -28,7 +28,11 @@ use App\Livewire\Products\Edit as ProductsEdit;
 use App\Livewire\Products\Index as ProductsIndex;
 use App\Livewire\Products\Precios as ProductsPrecios;
 use App\Livewire\Products\Show as ProductsShow;
+use App\Livewire\Dashboard;
+use App\Livewire\Products\Importar as ProductsImportar;
 use App\Livewire\Products\Stock as ProductsStock;
+use App\Services\ImportacionProductos;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 use App\Livewire\Promociones\Index as PromocionesIndex;
 use App\Livewire\PuntosDeVenta\Index as PuntosDeVentaIndex;
 use App\Livewire\Reportes\Ventas as ReportesVentas;
@@ -66,9 +70,7 @@ Route::middleware('guest')->group(function () {
 // Rutas protegidas (requieren autenticación)
 Route::middleware('auth')->group(function () {
     // Dashboard
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
     // Logout
     Route::post('/logout', function () {
@@ -85,6 +87,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/productos/precios', ProductsPrecios::class)->name('productos.precios');
     // Antes de /productos/{productId}, si no "stock" se toma como un id.
     Route::get('/productos/stock', ProductsStock::class)->name('productos.stock');
+    Route::get('/productos/importar', ProductsImportar::class)->middleware('can:productos.crear')->name('productos.importar');
+    Route::get('/productos/importar/plantilla', function (ImportacionProductos $importacion) {
+        $libro = $importacion->plantilla();
+
+        return response()->streamDownload(
+            fn () => (new XlsxWriter($libro))->save('php://output'),
+            'plantilla-productos.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        );
+    })->middleware('can:productos.crear')->name('productos.importar.plantilla');
     Route::get('/productos/{productId}', ProductsShow::class)->name('productos.show');
     Route::get('/productos/{productId}/editar', ProductsEdit::class)->name('productos.edit');
 

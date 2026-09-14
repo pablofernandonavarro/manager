@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProductType;
 use App\Observers\ProductObserver;
+use App\Support\Ean13;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -258,6 +259,23 @@ class Product extends Model
             }
 
             $product->busqueda = $product->buildBusqueda();
+        });
+
+        // Todo producto que se vende (o variante) necesita código de barras para la caja.
+        // Si no se cargó uno, recibe un EAN-13 interno: alta manual, variantes o Excel.
+        static::created(function (Product $product): void {
+            if ($product->isConfigurable() || filled($product->codigo_barras)) {
+                return;
+            }
+
+            $codigo = Ean13::interno($product->id);
+
+            if (static::where('codigo_barras', $codigo)->exists()) {
+                return;
+            }
+
+            $product->codigo_barras = $codigo;
+            $product->save();
         });
     }
 

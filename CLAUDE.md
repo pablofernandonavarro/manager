@@ -350,6 +350,10 @@ Centralizada en el Manager: **un emisor** (`ConfiguracionFiscal`, fila única id
 - **Operación**: hacen falta `queue:work` (jobs `AutorizarComprobante`, backoff hasta 15 min) y el scheduler (`facturacion:autorizar-pendientes` cada 5 minutos, re-encola lo que agotó intentos). Pantalla `Facturacion\Comprobantes` (`facturacion.ver`, admin y supervisor); **Reintentar** (también rechazados) requiere `facturacion.configurar`.
 - Tests: `FacturacionEmisionTest` simula AFIP con estado (numera, emite, responde consultas, corta la respuesta con `Http::failedConnection()`).
 
+## Dashboard
+
+`App\Livewire\Dashboard` (`/dashboard`) con los datos de `App\Services\DashboardService`; filtro por sucursal (`?sucursal=`) y `wire:poll.60s`. Las ventas salen de `ReporteVentasService` (mismos días locales y devoluciones que el reporte: los números tienen que coincidir). Bloques según permiso: `reportes.ver` (hoy vs. ayer, mes vs. mismos días del mes anterior, 14 días, medios de pago, por caja, más vendidos), `terminales.ver`/`cajas.ver` (salud con `SaludCaja`, cajas "instaladas" = canjearon un código, turnos abiertos), `productos.ver` (stock crítico: vendibles con `stock_sucursal.cantidad <= stock_critico`), `remitos.ver`, `facturacion.ver`, `clientes.gestionar`. En tests, `Carbon::setTestNow` en UTC: con otra zona Carbon lee las fechas de la base en esa zona.
+
 ## Reportes de ventas
 
 `App\Services\ReporteVentasService` (pantalla `Reportes\Ventas`, exportación `ExportarVentasController`, permiso `reportes.ver` para admin y supervisor): indicadores (bruto, descuentos, manuales, cobrado, devoluciones, neto, ticket promedio, unidades), por medio de pago, por cajero, por sucursal/caja, por día, tarjetas/QR para conciliar y promociones.
@@ -366,8 +370,17 @@ Centralizada en el Manager: **un emisor** (`ConfiguracionFiscal`, fila única id
 - El disponible se lee dentro de la transacción con `lockForUpdate`, **nunca** del valor que manda la pantalla: antes el control de stock se hacía contra un parámetro del navegador y se podía dejar Central en negativo.
 - `confirmar`/`cancelar` bloquean la fila del remito y releen el estado: un doble clic no acredita dos veces.
 - Errores de negocio salen como `App\Exceptions\RemitoException`, con mensaje apto para mostrar.
-- Permisos: `remitos.ver`, `remitos.crear`, `remitos.recibir`, `remitos.cancelar` (admin todos; supervisor ver y recibir). Cubierto por `tests/Feature/RemitosTest.php`.
+- Permisos: `remitos.ver`, `remitos.crear`, `remitos.recibir`, `remitos.cancelar` (admin todos; supervisor ver, crear y recibir, no cancelar). Cubierto por `tests/Feature/RemitosTest.php`.
 - **Recepción desde la caja**: `GET api/v1/pos/remitos` (en tránsito hacia la sucursal del PDV autenticado) y `POST api/v1/pos/remitos/{id}/recibir` (`PosRemitosController`). Recibir es **idempotente**: si ya estaba confirmado responde 200 `ya_recibido` con el stock actual, para que la caja pueda reintentar tras un corte; cancelado → 409; de otra sucursal → 404. Devuelve `stock[]` de la sucursal para esos productos. Quién recibió queda en `confirmado_por_user_id` / `confirmado_por_punto_de_venta_id`. Cubierto por `tests/Feature/PosRemitosTest.php`.
+
+En el menú, **Remitos** y **Ajuste de stock** están en el nivel principal (antes escondidos en Configuración → Sucursales y nadie los encontraba).
+
+## Alta de productos: código de barras, stock inicial e importación Excel
+
+- **Código de barras automático**: el `created` de `Product` le asigna `Ean13::interno($id)` (prefijo 20, reservado por GS1 para uso interno; nunca choca con un 779… de proveedor) a todo producto no configurable que se crea sin código. Vale para el alta manual, las variantes y el Excel. El seeder corre sin eventos y usa sus propios EAN.
+- **Stock inicial por sucursal** (`StockInicialService`): el alta de un simple y las variantes (alta y "agregar variantes" en editar) piden `sucursalStockId`; la cantidad entra a `stock_sucursal` con un `MovimientoStock` tipo `entrada` y `products.stock` queda como suma. Antes se guardaba en `products.stock` sin sucursal: no llegaba a ninguna caja. Con cantidad y sin sucursal → error de validación.
+- `ProductConfigurableService`: SKU de variante con `mb_substr`/`mb_strtoupper` (acentos, Ñ) y `codigoLibre()` (Azul / Azul marino → `-AZU-40` y `-AZU-40-2`); crea todo en transacción.
+- **Importar Excel** (`Products\Importar`, `/productos/importar`, permiso `productos.crear`; plantilla en `/productos/importar/plantilla`) → `App\Services\ImportacionProductos`. Columnas por encabezado: `modelo, codigo, nombre, color, talle, codigo_barras, precio, costo, iva` + `stock <nombre de sucursal>`. Sin modelo = simple por `codigo`; con modelo = variante por modelo + color + talle (crea el configurable y los valores de atributo si faltan). Existente → actualiza; celda vacía no pisa. **Stock = cantidad final** (ajuste, un `AjusteInventario` por sucursal), no suma: reimportar el mismo archivo no duplica. `analizar()` valida todo (números con formato argentino, EAN de Excel como número, duplicados en el archivo, código de barras de otro producto, sucursal inexistente) y `aplicar()` re-analiza el archivo y escribe en transacción: con un error no se escribe nada. Columnas de stock exigen `stock.ajustar`. Tests: `ImportacionProductosTest`, `AltaDeProductosConStockTest`.
 
 ## Seeders (datos de ejemplo de indumentaria)
 

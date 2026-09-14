@@ -23,6 +23,18 @@ final class Ean13
         return $doceDigitos.((10 - $suma % 10) % 10);
     }
 
+    /**
+     * EAN-13 de uso interno para un producto sin código de barras propio.
+     *
+     * Prefijo 20: GS1 reserva 20–29 para circulación restringida dentro de la empresa, así
+     * que nunca choca con el código de un proveedor (779… en Argentina). El resto es el id
+     * del producto: único sin contador ni consulta.
+     */
+    public static function interno(int $productoId): string
+    {
+        return self::conVerificador('20'.str_pad((string) $productoId, 10, '0', STR_PAD_LEFT));
+    }
+
     public static function valido(?string $codigo): bool
     {
         return is_string($codigo)

@@ -292,7 +292,8 @@
                 <div x-show="$wire.variants.length > 0" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
                         <h4 class="font-semibold text-gray-900">Variantes Generadas (<span x-text="$wire.variants.length"></span>)</h4>
-                        <p class="text-sm text-gray-600 mt-1">Configura el stock para cada variante</p>
+                        <p class="text-sm text-gray-600 mt-1">Configura el stock para cada variante. El código de barras se genera solo.</p>
+                        <div class="mt-3 max-w-sm">@include('livewire.products._sucursal-stock')</div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
@@ -332,8 +333,12 @@
             <div x-show="activeTab === 'inventario'" class="p-6 space-y-6">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock</label>
-                        <input type="number" wire:model="stock" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock inicial</label>
+                        <input type="number" wire:model="stock" min="0" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        @error('stock') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div x-show="productType === 'simple'">
+                        @include('livewire.products._sucursal-stock')
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Stock Crítico</label>

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ProductType;
 use App\Models\Product;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Servicio para manejar productos configurables estilo Magento 2.
@@ -16,27 +17,36 @@ use Illuminate\Support\Collection;
  */
 class ProductConfigurableService
 {
+    public function __construct(
+        private readonly StockInicialService $stockInicial,
+    ) {}
+
     /**
      * Crea un producto configurable con sus variantes (estilo Magento 2).
      *
+     * El `stock` de cada variante entra a `$sucursalStockId` (stock_sucursal + movimiento).
+     * Sin sucursal no se carga stock: nunca queda en products.stock sin sucursal.
+     *
      * @param  array  $configurableData  Datos del producto configurable (padre)
-     * @param  array  $variants  Array de variantes: [['color' => 'Rojo', 'talle' => 'M', 'stock' => 10], ...]
+     * @param  array  $variants  Array de variantes: [['attributes' => [...], 'stock' => 10, 'codigo_barras' => ?], ...]
      * @return Product El producto configurable creado con sus variantes asociadas
      */
-    public function createConfigurableWithVariants(array $configurableData, array $variants): Product
+    public function createConfigurableWithVariants(array $configurableData, array $variants, ?int $sucursalStockId = null): Product
     {
-        // Paso 1: Crear productos SIMPLES primero (como Magento 2)
-        $simpleProducts = collect($variants)->map(function ($variantData) use ($configurableData) {
-            return $this->createSimpleProduct($configurableData, $variantData);
+        return DB::transaction(function () use ($configurableData, $variants, $sucursalStockId) {
+            // Paso 1: Crear productos SIMPLES primero (como Magento 2)
+            $simpleProducts = collect($variants)->map(function ($variantData) use ($configurableData, $sucursalStockId) {
+                return $this->createSimpleProduct($configurableData, $variantData, $sucursalStockId);
+            });
+
+            // Paso 2: Crear producto CONFIGURABLE (padre)
+            $configurable = $this->createConfigurableProduct($configurableData);
+
+            // Paso 3: Asociar los productos simples al configurable
+            $this->associateVariants($configurable, $simpleProducts);
+
+            return $configurable->load('variants');
         });
-
-        // Paso 2: Crear producto CONFIGURABLE (padre)
-        $configurable = $this->createConfigurableProduct($configurableData);
-
-        // Paso 3: Asociar los productos simples al configurable
-        $this->associateVariants($configurable, $simpleProducts);
-
-        return $configurable->load('variants');
     }
 
     /**
@@ -45,7 +55,7 @@ class ProductConfigurableService
      * @param  array<string, mixed>  $configurableData
      * @param  array{attributes?: list<array{slug: string, product_column: string|null, value: string}>, stock?: int}  $variantData
      */
-    protected function createSimpleProduct(array $configurableData, array $variantData): Product
+    protected function createSimpleProduct(array $configurableData, array $variantData, ?int $sucursalStockId = null): Product
     {
         $productData = [];
         $attrExtra = [];
@@ -62,24 +72,26 @@ class ProductConfigurableService
 
         $productData['atributos_extra'] = $attrExtra ?: null;
 
+        // mb_*: con substr() un valor como "Ñandú" o "Único" cortaba un carácter por la mitad.
         $suffix = implode('-', array_map(
-            fn ($a) => strtoupper(substr($a['value'], 0, 3)),
+            fn ($a) => mb_strtoupper(mb_substr(trim((string) $a['value']), 0, 3)),
             $variantData['attributes'] ?? []
         ));
 
         $productData['nombre'] = $configurableData['nombre']
             .(count($allValues) > 0 ? ' - '.implode(' - ', $allValues) : '');
 
-        $productData['codigo_interno'] = $configurableData['codigo_interno']
-            .($suffix ? '-'.$suffix : '');
+        $productData['codigo_interno'] = $this->codigoLibre($configurableData['codigo_interno']
+            .($suffix ? '-'.$suffix : ''));
 
-        return Product::create(array_merge($productData, [
+        $variante = Product::create(array_merge($productData, [
             'product_type' => ProductType::SIMPLE,
             'parent_id' => null,
             'codigo_barras' => $variantData['codigo_barras'] ?? null,
             'descripcion_web' => $configurableData['descripcion_web'] ?? null,
             'descripcion_tecnica' => $configurableData['descripcion_tecnica'] ?? null,
-            'stock' => $variantData['stock'] ?? 0,
+            // La suma de stock_sucursal; lo carga StockInicialService.
+            'stock' => 0,
             'stock_critico' => $configurableData['stock_critico'] ?? 10,
             'primera' => $variantData['primera'] ?? 0,
             'segunda' => $variantData['segunda'] ?? 0,
@@ -100,6 +112,27 @@ class ProductConfigurableService
             'estado' => $configurableData['estado'] ?? 1,
             'publicar_ml' => $configurableData['publicar_ml'] ?? false,
         ]));
+
+        if ($sucursalStockId) {
+            $this->stockInicial->cargar($variante, $sucursalStockId, (int) ($variantData['stock'] ?? 0));
+        }
+
+        return $variante;
+    }
+
+    /**
+     * "Azul" y "Azul marino" dan el mismo sufijo (AZU): el segundo SKU sale con -2 en vez
+     * de repetir el código y confundir a la caja.
+     */
+    private function codigoLibre(string $codigo): string
+    {
+        $candidato = $codigo;
+
+        for ($n = 2; Product::withTrashed()->where('codigo_interno', $candidato)->exists(); $n++) {
+            $candidato = "{$codigo}-{$n}";
+        }
+
+        return $candidato;
     }
 
     /**
@@ -171,7 +204,7 @@ class ProductConfigurableService
     /**
      * Agrega variantes adicionales a un configurable existente.
      */
-    public function addVariantsToConfigurable(Product $configurable, array $variants): Collection
+    public function addVariantsToConfigurable(Product $configurable, array $variants, ?int $sucursalStockId = null): Collection
     {
         if (! $configurable->isConfigurable()) {
             throw new \InvalidArgumentException('El producto debe ser de tipo configurable');
@@ -179,29 +212,29 @@ class ProductConfigurableService
 
         $configurableData = $configurable->toArray();
 
-        $newVariants = collect($variants)->map(function ($variantData) use ($configurableData) {
-            $simple = $this->createSimpleProduct($configurableData, $variantData);
+        return DB::transaction(fn () => collect($variants)->map(function ($variantData) use ($configurableData, $sucursalStockId) {
+            $simple = $this->createSimpleProduct($configurableData, $variantData, $sucursalStockId);
             $simple->update(['parent_id' => $configurableData['id']]);
 
             return $simple;
-        });
-
-        return $newVariants;
+        }));
     }
 
     /**
      * Crea variantes para un producto configurable ya existente.
      */
-    public function createVariantsForExisting(Product $configurable, array $configurableData, array $variants): void
+    public function createVariantsForExisting(Product $configurable, array $configurableData, array $variants, ?int $sucursalStockId = null): void
     {
         if (! $configurable->isConfigurable()) {
             throw new \InvalidArgumentException('El producto debe ser de tipo configurable');
         }
 
-        foreach ($variants as $variantData) {
-            $simple = $this->createSimpleProduct($configurableData, $variantData);
-            $simple->update(['parent_id' => $configurable->id]);
-        }
+        DB::transaction(function () use ($configurable, $configurableData, $variants, $sucursalStockId): void {
+            foreach ($variants as $variantData) {
+                $simple = $this->createSimpleProduct($configurableData, $variantData, $sucursalStockId);
+                $simple->update(['parent_id' => $configurable->id]);
+            }
+        });
     }
 
     /**

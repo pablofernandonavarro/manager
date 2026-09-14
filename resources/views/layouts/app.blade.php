@@ -134,6 +134,27 @@
                 </a>
                 @endcan
 
+                {{-- Operación diaria: fuera de Configuración para que se encuentre. --}}
+                @can('remitos.ver')
+                <a href="/sucursales/remitos"
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('sucursales/remitos*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    Remitos
+                </a>
+                @endcan
+
+                @can('stock.ajustar')
+                <a href="/sucursales/ajuste-stock"
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('sucursales/ajuste-stock*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Ajuste de stock
+                </a>
+                @endcan
+
 
                 @can('clientes.gestionar')
                 <a href="/clientes"
@@ -162,7 +183,7 @@
                         || request()->is('permisos*')
                         || request()->is('configuracion*')
                         || request()->is('listas-precios*')
-                        || request()->is('sucursales*')
+                        || (request()->is('sucursales*') && ! request()->is('sucursales/remitos*', 'sucursales/ajuste-stock*'))
                         || request()->is('puntos-de-venta*');
                 @endphp
                 <div x-data="{ configOpen: @js($configOpen) }">
@@ -298,7 +319,7 @@
                             Procedencias
                         </a>
                         <!-- Sucursales con submenú -->
-                        @php $sucursalesOpen = request()->is('sucursales*'); @endphp
+                        @php $sucursalesOpen = request()->is('sucursales*') && ! request()->is('sucursales/remitos*', 'sucursales/ajuste-stock*'); @endphp
                         <div x-data="{ sucursalesOpen: @js($sucursalesOpen) }">
                             <button @click="sucursalesOpen = !sucursalesOpen"
                                     class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors {{ $sucursalesOpen ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
@@ -331,22 +352,6 @@
                                     </svg>
                                     Stock
                                 </a>
-                                @can('stock.ajustar')
-                                <a href="/sucursales/ajuste-stock" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/ajuste-stock*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                    Ajuste de stock
-                                </a>
-                                @endcan
-                                @can('remitos.ver')
-                                <a href="/sucursales/remitos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/remitos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                    </svg>
-                                    Remitos
-                                </a>
-                                @endcan
                             </div>
                         </div>
                         <a href="/puntos-de-venta" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('puntos-de-venta*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">

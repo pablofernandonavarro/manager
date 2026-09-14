@@ -11,6 +11,7 @@ use App\Models\Procedencia;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Subgrupo;
+use App\Models\Sucursal;
 use App\Models\Target;
 use App\Models\Temporada;
 use Illuminate\Support\Collection;
@@ -39,6 +40,9 @@ class Edit extends Component
     public array $selectedAttributeValues = [];
 
     public array $variants = [];
+
+    /** Sucursal donde entra el stock de las variantes nuevas. */
+    public ?int $sucursalStockId = null;
 
     // Tipo de producto (NUEVO)
     #[Rule('required|in:simple,configurable')]
@@ -796,6 +800,16 @@ class Edit extends Component
             return;
         }
 
+        $conStock = array_sum(array_map(fn ($v) => max(0, (int) ($v['stock'] ?? 0)), $this->variants)) > 0;
+
+        $this->validate([
+            'sucursalStockId' => [$conStock ? 'required' : 'nullable', 'integer', 'exists:sucursales,id'],
+            'variants.*.stock' => 'nullable|integer|min:0',
+        ], [
+            'sucursalStockId.required' => 'Elegí en qué sucursal entra el stock de las variantes.',
+            'variants.*.stock.min' => 'El stock no puede ser negativo.',
+        ]);
+
         $configurableData = [
             'nombre' => $this->nombre,
             'codigo_interno' => $this->codigo_interno,
@@ -822,10 +836,10 @@ class Edit extends Component
 
         try {
             $service = app(\App\Services\ProductConfigurableService::class);
-            $service->createVariantsForExisting($this->product, $configurableData, $this->variants);
+            $service->createVariantsForExisting($this->product, $configurableData, $this->variants, $this->sucursalStockId);
 
             // Limpiar el formulario
-            $this->reset(['variants', 'selectedAttributeValues']);
+            $this->reset(['variants', 'selectedAttributeValues', 'sucursalStockId']);
 
             // Recargar el producto con sus variantes
             $this->product->refresh();
@@ -1043,6 +1057,7 @@ class Edit extends Component
             'subgrupos' => Subgrupo::where('activo', true)->orderBy('nombre')->get(),
             'targets' => Target::where('activo', true)->orderBy('nombre')->get(),
             'procedencias' => Procedencia::where('activo', true)->orderBy('nombre')->get(),
+            'sucursales' => Sucursal::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 }

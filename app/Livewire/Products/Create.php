@@ -10,9 +10,11 @@ use App\Models\Marca;
 use App\Models\Procedencia;
 use App\Models\Product;
 use App\Models\Subgrupo;
+use App\Models\Sucursal;
 use App\Models\Target;
 use App\Models\Temporada;
 use App\Services\ProductCodeService;
+use App\Services\StockInicialService;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Rule;
@@ -34,6 +36,9 @@ class Create extends Component
     public array $selectedAttributeValues = [];
 
     public array $variants = [];
+
+    /** Sucursal donde entra el stock cargado en el alta (del producto simple o de cada variante). */
+    public ?int $sucursalStockId = null;
 
     // Información básica
     #[Rule('required|string|max:100')]
@@ -575,6 +580,7 @@ class Create extends Component
     public function save(): void
     {
         $this->validate();
+        $this->validarStockInicial();
 
         // Si es configurable con variantes, usar el servicio estilo Magento
         if ($this->product_type === 'configurable' && count($this->variants) > 0) {
@@ -606,7 +612,7 @@ class Create extends Component
         }
 
         // Si es simple o configurable sin variantes, crear normalmente
-        Product::create([
+        $producto = Product::create([
             'product_type' => ProductType::from($this->product_type),
             'nombre' => $this->nombre,
             'codigo_interno' => $this->codigo_interno,
@@ -615,7 +621,8 @@ class Create extends Component
             'costo' => $this->costo,
             'costo_usd' => $this->costo_usd,
             'costo_produccion' => $this->costo_produccion,
-            'stock' => $this->stock,
+            // La suma de stock_sucursal: el stock inicial entra por StockInicialService.
+            'stock' => 0,
             'stock_critico' => $this->stock_critico,
             'stock_comprometido' => $this->stock_comprometido,
             'stock_ml' => $this->stock_ml,
@@ -765,9 +772,38 @@ class Create extends Component
             'modelo_origen' => $this->modelo_origen,
         ]);
 
+        if ($this->product_type === 'simple' && $this->sucursalStockId) {
+            app(StockInicialService::class)->cargar($producto, $this->sucursalStockId, (int) $this->stock);
+        }
+
         session()->flash('success', 'Producto creado correctamente.');
 
         $this->redirect('/productos', navigate: true);
+    }
+
+    /**
+     * El stock del alta tiene que ir a una sucursal: sin eso quedaba en products.stock y no
+     * lo veía ninguna caja ni las pantallas de stock.
+     */
+    private function validarStockInicial(): void
+    {
+        $cantidades = $this->product_type === 'configurable'
+            ? array_map(fn ($v) => (int) ($v['stock'] ?? 0), $this->variants)
+            : [(int) $this->stock];
+
+        $this->validate([
+            'sucursalStockId' => [
+                array_sum(array_map(fn ($c) => max(0, $c), $cantidades)) > 0 ? 'required' : 'nullable',
+                'integer',
+                'exists:sucursales,id',
+            ],
+            'stock' => 'nullable|integer|min:0',
+            'variants.*.stock' => 'nullable|integer|min:0',
+        ], [
+            'sucursalStockId.required' => 'Elegí en qué sucursal entra el stock inicial.',
+            'stock.min' => 'El stock no puede ser negativo.',
+            'variants.*.stock.min' => 'El stock no puede ser negativo.',
+        ]);
     }
 
     /**
@@ -803,7 +839,7 @@ class Create extends Component
         ];
 
         // Crear usando el servicio
-        $service->createConfigurableWithVariants($configurableData, $this->variants);
+        $service->createConfigurableWithVariants($configurableData, $this->variants, $this->sucursalStockId);
 
         session()->flash('success', 'Producto configurable creado con '.count($this->variants).' variantes.');
         $this->redirect('/productos', navigate: true);
@@ -820,6 +856,7 @@ class Create extends Component
             'subgrupos' => Subgrupo::where('activo', true)->orderBy('nombre')->get(),
             'targets' => Target::where('activo', true)->orderBy('nombre')->get(),
             'procedencias' => Procedencia::where('activo', true)->orderBy('nombre')->get(),
+            'sucursales' => Sucursal::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 }

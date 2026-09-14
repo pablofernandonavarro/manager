@@ -29,6 +29,8 @@ class RolesSeederTest extends TestCase
 
         $supervisor = Role::findByName('supervisor', 'web');
         $this->assertTrue($supervisor->hasPermissionTo('remitos.recibir'));
+        $this->assertTrue($supervisor->hasPermissionTo('remitos.crear'));
+        $this->assertFalse($supervisor->hasPermissionTo('remitos.cancelar'));
         $this->assertTrue($supervisor->hasPermissionTo('clientes.gestionar'));
         $this->assertFalse($supervisor->hasPermissionTo('stock.ajustar'));
         $this->assertFalse($supervisor->hasPermissionTo('facturacion.configurar'));

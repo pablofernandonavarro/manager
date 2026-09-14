@@ -398,6 +398,8 @@
                             </tbody>
                         </table>
 
+                        <div class="mt-4 px-4 max-w-sm">@include('livewire.products._sucursal-stock')</div>
+
                         <!-- Botón Guardar Variantes -->
                         <div class="mt-4 mb-4 px-4">
                             <button type="button" wire:click="saveVariants"
