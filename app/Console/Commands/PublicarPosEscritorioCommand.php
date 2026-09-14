@@ -20,7 +20,7 @@ class PublicarPosEscritorioCommand extends Command
      * los datos de una caja. En la app de escritorio los datos viven en %APPDATA%, así
      * que una compilación sana nunca los trae.
      */
-    private const PROHIBIDO = ['.sqlite', '.sqlite-wal', '.sqlite-shm', '.pos-info'];
+    private const PROHIBIDO = ['.sqlite', '.sqlite-wal', '.sqlite-shm', '.pos-info', '.env.escritorio'];
 
     public function handle(): int
     {

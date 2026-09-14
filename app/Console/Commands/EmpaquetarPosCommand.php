@@ -47,7 +47,8 @@ class EmpaquetarPosCommand extends Command
      * @var array<int, string>
      */
     private const EXCLUIR = [
-        '.env', 'database/database.sqlite', 'storage', 'vendor', 'node_modules',
+        // .env.escritorio: el .env de la app de escritorio, con su APP_KEY.
+        '.env', '.env.escritorio', 'database/database.sqlite', 'storage', 'vendor', 'node_modules',
         '.git', '.pos-info', 'bootstrap/cache',
     ];
 

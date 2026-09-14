@@ -20,7 +20,7 @@ class GenerarKitPosCommand extends Command
      * @var array<int, string>
      */
     private const PROHIBIDO = [
-        '.env', '.pos-info', 'database/database.sqlite',
+        '.env', '.env.escritorio', '.pos-info', 'database/database.sqlite',
         '.git', 'storage/logs', 'storage/app', 'storage/framework', 'bootstrap/cache',
     ];
 
