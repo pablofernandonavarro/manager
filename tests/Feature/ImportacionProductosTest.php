@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\ProductType;
+use App\Jobs\ImportarProductos;
 use App\Livewire\Products\Importar;
 use App\Models\AjusteInventario;
+use App\Models\ImportacionProducto;
 use App\Models\Product;
 use App\Models\StockSucursal;
 use App\Models\Sucursal;
@@ -13,6 +15,7 @@ use App\Services\ImportacionProductos;
 use App\Support\Ean13;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -185,18 +188,50 @@ class ImportacionProductosTest extends TestCase
             ->assertSee('no tenés permiso para ajustar stock')
             ->call('aplicar');
         $this->assertSame(0, Product::count());
+        $this->assertSame(0, ImportacionProducto::count());
 
         $soloProductos->givePermissionTo('stock.ajustar');
 
+        // En los tests la cola es sync: el job corre al encolar.
         Livewire::test(Importar::class)
             ->set('archivo', $archivo)
             ->assertSet('errores', [])
             ->assertSee('Remera oversize')
             ->call('aplicar')
-            ->assertSet('resultado.creados', 3)
-            ->assertSet('totalFilas', 0);
+            ->assertSet('totalFilas', 0)
+            ->assertSee('Terminada')
+            ->assertSee('3 creados');
 
         $this->assertSame(4, Product::count());
+        $importacion = ImportacionProducto::sole();
+        $this->assertSame(ImportacionProducto::TERMINADA, $importacion->estado);
+        $this->assertSame(3, $importacion->filas);
+        $this->assertSame(3, $importacion->resultado['creados']);
+        $this->assertSame($soloProductos->id, $importacion->user_id);
+        Storage::disk('local')->assertMissing($importacion->archivo);
+    }
+
+    public function test_job_que_encuentra_errores_al_correr_queda_fallida_sin_guardar_nada(): void
+    {
+        // El catálogo cambió entre la vista previa y la corrida: el código de barras ya es de otro.
+        Storage::disk('local')->put('importaciones/prueba.xlsx', file_get_contents($this->excel([
+            ['codigo', 'nombre', 'codigo_barras', 'precio'],
+            ['NUEVO-1', 'Nuevo', '7790000000001', 100],
+        ])));
+        Product::create(['product_type' => ProductType::SIMPLE, 'codigo_interno' => 'OTRO', 'nombre' => 'Otro', 'codigo_barras' => '7790000000001', 'precio' => 1]);
+        $registro = ImportacionProducto::create(['archivo' => 'importaciones/prueba.xlsx', 'nombre_original' => 'prueba.xlsx', 'filas' => 1]);
+
+        ImportarProductos::dispatchSync($registro->id);
+
+        $registro->refresh();
+        $this->assertSame(ImportacionProducto::FALLIDA, $registro->estado);
+        $this->assertStringContainsString('errores', $registro->error);
+        $this->assertNull(Product::where('codigo_interno', 'NUEVO-1')->first());
+        Storage::disk('local')->assertMissing('importaciones/prueba.xlsx');
+
+        // Una segunda corrida del mismo job (reintento de la cola) no hace nada.
+        ImportarProductos::dispatchSync($registro->id);
+        $this->assertSame(ImportacionProducto::FALLIDA, $registro->fresh()->estado);
     }
 
     public function test_plantilla_trae_una_columna_de_stock_por_sucursal(): void

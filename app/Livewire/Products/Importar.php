@@ -2,8 +2,12 @@
 
 namespace App\Livewire\Products;
 
+use App\Jobs\ImportarProductos;
+use App\Models\ImportacionProducto;
+use App\Models\Sucursal;
 use App\Services\ImportacionProductos;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -30,9 +34,6 @@ class Importar extends Component
     /** @var array<string, int> */
     public array $resumen = [];
 
-    /** @var array<string, int>|null */
-    public ?array $resultado = null;
-
     public function mount(): void
     {
         $this->authorize('productos.crear');
@@ -42,7 +43,7 @@ class Importar extends Component
     {
         $this->authorize('productos.crear');
 
-        $this->reset(['previa', 'totalFilas', 'errores', 'resumen', 'resultado']);
+        $this->reset(['previa', 'totalFilas', 'errores', 'resumen']);
         $this->validate(['archivo' => 'required|file|mimes:xlsx,xls,csv|max:10240'], [
             'archivo.mimes' => 'Subí un archivo Excel (.xlsx o .xls) o CSV.',
             'archivo.max' => 'El archivo no puede pesar más de 10 MB.',
@@ -56,6 +57,11 @@ class Importar extends Component
         $this->previa = array_slice($analisis['filas'], 0, self::FILAS_VISIBLES);
     }
 
+    /**
+     * Encola la importación: miles de filas tardan minutos, más que el límite de un pedido
+     * web. El job vuelve a analizar el archivo al correr (la previsualización es solo para
+     * mostrar, y entre medio pudo cambiar el catálogo).
+     */
     public function aplicar(ImportacionProductos $importacion): void
     {
         $this->authorize('productos.crear');
@@ -64,7 +70,6 @@ class Importar extends Component
             return;
         }
 
-        // Se vuelve a analizar el archivo: la previsualización es solo para mostrar.
         $analisis = $importacion->analizar($this->archivo->getRealPath());
         if ($analisis['errores'] || $this->erroresDePermiso($analisis['resumen'])) {
             $this->errores = [...$analisis['errores'], ...$this->erroresDePermiso($analisis['resumen'])];
@@ -72,20 +77,26 @@ class Importar extends Component
             return;
         }
 
-        try {
-            $this->resultado = $importacion->aplicar($this->archivo->getRealPath(), auth()->id(), $this->archivo->getClientOriginalName());
-        } catch (\RuntimeException $e) {
-            $this->errores = [$e->getMessage()];
+        $extension = strtolower($this->archivo->getClientOriginalExtension()) ?: 'xlsx';
+        $ruta = $this->archivo->storeAs('importaciones', Str::uuid().'.'.$extension, 'local');
 
-            return;
-        }
+        $registro = ImportacionProducto::create([
+            'user_id' => auth()->id(),
+            'archivo' => $ruta,
+            'nombre_original' => mb_substr($this->archivo->getClientOriginalName(), 0, 255),
+            'estado' => ImportacionProducto::PENDIENTE,
+            'filas' => count($analisis['filas']),
+            'resumen' => $analisis['resumen'],
+        ]);
+
+        ImportarProductos::dispatch($registro->id);
 
         $this->reset(['archivo', 'previa', 'totalFilas', 'errores', 'resumen']);
     }
 
     public function descartar(): void
     {
-        $this->reset(['archivo', 'previa', 'totalFilas', 'errores', 'resumen', 'resultado']);
+        $this->reset(['archivo', 'previa', 'totalFilas', 'errores', 'resumen']);
     }
 
     /**
@@ -102,8 +113,12 @@ class Importar extends Component
     #[Layout('layouts.app')]
     public function render(): mixed
     {
+        $importaciones = ImportacionProducto::with('user:id,name')->latest()->limit(8)->get();
+
         return view('livewire.products.importar', [
-            'sucursales' => \App\Models\Sucursal::where('activo', true)->pluck('nombre', 'id'),
+            'sucursales' => Sucursal::where('activo', true)->pluck('nombre', 'id'),
+            'importaciones' => $importaciones,
+            'hayEnCurso' => $importaciones->contains(fn (ImportacionProducto $i) => $i->enCurso()),
         ]);
     }
 }

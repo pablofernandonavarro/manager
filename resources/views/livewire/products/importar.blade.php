@@ -21,10 +21,43 @@
         </a>
     </div>
 
-    @if($resultado)
-        <div class="rounded-lg bg-green-50 p-4 border-l-4 border-green-400 text-sm text-green-800">
-            Importación aplicada: {{ $resultado['creados'] }} producto(s) creados, {{ $resultado['actualizados'] }} actualizados,
-            {{ $resultado['modelos'] }} modelo(s) nuevos y {{ $resultado['stock'] }} cambio(s) de stock. Las cajas lo reciben en su próxima sincronización.
+    @if($importaciones->isNotEmpty())
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" @if($hayEnCurso) wire:poll.3s @endif>
+            <div class="px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-gray-900">Importaciones recientes</h2>
+                @if($hayEnCurso)
+                    <span class="text-xs text-gray-500">Se procesan en segundo plano: podés cerrar esta página.</span>
+                @endif
+            </div>
+            <div class="divide-y divide-gray-100">
+                @foreach($importaciones as $imp)
+                    <div class="px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" wire:key="imp-{{ $imp->id }}">
+                        @php
+                            $badge = [
+                                'pendiente' => ['bg-gray-100 text-gray-700', 'En cola'],
+                                'procesando' => ['bg-blue-100 text-blue-800', 'Procesando…'],
+                                'terminada' => ['bg-green-100 text-green-800', 'Terminada'],
+                                'fallida' => ['bg-red-100 text-red-800', 'Falló'],
+                            ][$imp->estado] ?? ['bg-gray-100 text-gray-700', $imp->estado];
+                        @endphp
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $badge[0] }}">{{ $badge[1] }}</span>
+                        <span class="font-medium text-gray-900">{{ $imp->nombre_original }}</span>
+                        <span class="text-gray-500">{{ number_format($imp->filas, 0, ',', '.') }} filas</span>
+                        <span class="text-gray-400">{{ $imp->user?->name }} · {{ $imp->created_at->timezone(config('app.display_timezone'))->format('d/m H:i') }}</span>
+                        <span class="basis-full sm:basis-auto sm:ml-auto text-gray-600">
+                            @if($imp->estado === 'terminada' && $imp->resultado)
+                                {{ $imp->resultado['creados'] }} creados · {{ $imp->resultado['actualizados'] }} actualizados ·
+                                {{ $imp->resultado['modelos'] }} modelos nuevos · {{ $imp->resultado['stock'] }} cambios de stock
+                                <span class="text-gray-400">· {{ $imp->iniciado_at?->diffInMinutes($imp->terminado_at) < 1 ? 'menos de 1 min' : (int) $imp->iniciado_at?->diffInMinutes($imp->terminado_at).' min' }}</span>
+                            @elseif($imp->estado === 'fallida')
+                                <span class="text-red-700">{{ $imp->error }} No se guardó nada.</span>
+                            @elseif($imp->estado === 'procesando')
+                                desde {{ $imp->iniciado_at?->timezone(config('app.display_timezone'))->format('H:i') }} · 5.000 filas tardan unos minutos
+                            @endif
+                        </span>
+                    </div>
+                @endforeach
+            </div>
         </div>
     @endif
 
@@ -61,7 +94,7 @@
                     <button type="button" wire:click="aplicar" wire:loading.attr="disabled" @disabled($errores)
                             class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="aplicar">Aplicar importación</span>
-                        <span wire:loading wire:target="aplicar">Aplicando…</span>
+                        <span wire:loading wire:target="aplicar">Encolando…</span>
                     </button>
                 </div>
             </div>
