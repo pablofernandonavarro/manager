@@ -9,7 +9,7 @@ enum ProductType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SIMPLE => 'Simple',
             self::CONFIGURABLE => 'Configurable',
         };
@@ -17,7 +17,7 @@ enum ProductType: string
 
     public function description(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SIMPLE => 'Producto vendible individual (variante con color/talle específico)',
             self::CONFIGURABLE => 'Producto padre que agrupa variantes (no se vende directamente)',
         };

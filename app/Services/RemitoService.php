@@ -173,10 +173,6 @@ class RemitoService
      */
     private function recalcularTotales(array $productIds): void
     {
-        foreach (array_unique($productIds) as $productId) {
-            Product::whereKey($productId)->update([
-                'stock' => StockSucursal::where('product_id', $productId)->sum('cantidad'),
-            ]);
-        }
+        Product::recalcularStock($productIds);
     }
 }

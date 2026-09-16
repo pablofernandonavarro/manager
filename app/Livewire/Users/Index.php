@@ -13,6 +13,7 @@ class Index extends Component
     use AuthorizesRequests, WithPagination;
 
     public string $search = '';
+
     public int $perPage = 10;
 
     public function mount(): void
@@ -40,10 +41,11 @@ class Index extends Component
         // No permitir desactivar al usuario actual
         if ($user->id === auth()->id()) {
             session()->flash('error', 'No puedes desactivar tu propia cuenta.');
+
             return;
         }
 
-        $user->update(['active' => !$user->active]);
+        $user->update(['active' => ! $user->active]);
 
         session()->flash('success', $user->active ? 'Usuario activado correctamente.' : 'Usuario desactivado correctamente.');
     }
@@ -60,6 +62,7 @@ class Index extends Component
         // No permitir eliminar al usuario actual
         if ($user->id === auth()->id()) {
             session()->flash('error', 'No puedes eliminar tu propia cuenta.');
+
             return;
         }
 
@@ -87,8 +90,8 @@ class Index extends Component
         $users = User::withTrashed()
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%')
-                      ->orWhere('email', 'like', '%' . $this->search . '%');
+                    $q->where('name', 'like', '%'.$this->search.'%')
+                        ->orWhere('email', 'like', '%'.$this->search.'%');
                 });
             })
             ->with(['roles', 'sucursales:id,nombre'])

@@ -37,7 +37,7 @@ class Edit extends Component
     {
         // Validar nombre único excepto el actual
         $this->validate([
-            'name' => 'required|string|max:255|unique:roles,name,' . $this->role->id,
+            'name' => 'required|string|max:255|unique:roles,name,'.$this->role->id,
         ], [
             'name.required' => 'El nombre del rol es obligatorio.',
             'name.max' => 'El nombre no puede exceder :max caracteres.',

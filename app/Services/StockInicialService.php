@@ -37,6 +37,8 @@ class StockInicialService
             'fecha' => now(),
         ]);
 
-        $producto->update(['stock' => StockSucursal::where('product_id', $producto->id)->sum('cantidad')]);
+        Product::recalcularStock($producto->id);
+        $producto->stock = (int) StockSucursal::where('product_id', $producto->id)->sum('cantidad');
+        $producto->syncOriginalAttribute('stock');
     }
 }

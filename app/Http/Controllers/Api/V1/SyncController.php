@@ -7,9 +7,7 @@ use App\Exceptions\RemitoException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SyncMovimientosRequest;
 use App\Http\Requests\Api\V1\SyncVentasRequest;
-use App\Http\Resources\Api\V1\PrecioSyncResource;
 use App\Http\Resources\Api\V1\ProductSyncResource;
-use App\Http\Resources\Api\V1\StockSyncResource;
 use App\Jobs\AutorizarComprobante;
 use App\Models\DetallePrecio;
 use App\Models\MovimientoStock;
@@ -20,11 +18,12 @@ use App\Models\StockSucursal;
 use App\Models\User;
 use App\Services\RegistroVentasPos;
 use App\Services\RemitoService;
+use App\Support\CursorSync;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Carbon;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SyncController extends Controller
 {
@@ -39,10 +38,16 @@ class SyncController extends Controller
      * `synced_at` se toma ANTES de consultar: un producto guardado mientras se arma la
      * respuesta queda dentro del próximo delta.
      */
-    public function productos(Request $request): StreamedResponse
+    public function productos(Request $request): StreamedResponse|JsonResponse
     {
         /** @var \App\Models\PuntoDeVenta $pdv */
         $pdv = $request->user();
+
+        // Cajas 1.6.4+: por páginas con cursor. Sin limit/cursor, el contrato de siempre.
+        if ($request->filled('limit') || $request->filled('cursor')) {
+            return $this->productosPaginados($request, $pdv);
+        }
+
         $syncedAt = now();
         $desde = $request->filled('updated_since') ? Carbon::parse((string) $request->query('updated_since'))->utc() : null;
 
@@ -78,62 +83,177 @@ class SyncController extends Controller
                 }
             }
 
-            echo '],"total":'.$total.',"synced_at":'.json_encode($syncedAt->toIso8601String()).'}';
+            echo '],"total":'.$total.',"synced_at":'.json_encode(CursorSync::marca($syncedAt)).'}';
         }, 200, ['Content-Type' => 'application/json']);
     }
 
     /**
-     * Listas de precios asignadas a la sucursal del POS autenticado.
-     * Soporta delta sync con ?updated_since=ISO8601
+     * Una página del catálogo, ordenada por (updated_at, id). Con `incluir_inactivos=1` manda
+     * también las bajas (borrados y no vendibles, nunca los configurables) con `activo: false`,
+     * para que la caja deje de venderlos: el delta filtrado por es_vendible nunca las avisaba.
      */
-    public function precios(Request $request): JsonResponse
+    private function productosPaginados(Request $request, \App\Models\PuntoDeVenta $pdv): JsonResponse
+    {
+        try {
+            $pagina = CursorSync::desdeRequest($request, 1000);
+        } catch (\InvalidArgumentException) {
+            return response()->json(['message' => 'Cursor inválido.'], 422);
+        }
+
+        $query = Product::query()
+            ->when(
+                $request->boolean('incluir_inactivos'),
+                fn ($q) => $q->withTrashed()->where('products.product_type', '!=', 'configurable'),
+                fn ($q) => $q->where('products.es_vendible', true),
+            )
+            ->leftJoin('products as padres', 'padres.id', '=', 'products.parent_id')
+            ->select([
+                'products.id', 'products.nombre', 'products.codigo_interno', 'products.codigo_barras', 'products.busqueda',
+                'products.precio', 'products.costo', 'products.stock', 'products.stock_critico', 'products.imagen_url',
+                'products.descripcion_web', 'products.marca', 'products.color', 'products.n_talle', 'products.genero',
+                'products.n_grupo', 'products.n_subgrupo', 'products.n_temporada', 'products.product_type',
+                'products.parent_id', 'products.es_vendible', 'products.atributos_extra', 'products.updated_at',
+                'products.deleted_at', 'padres.codigo_interno as parent_codigo_interno', 'padres.nombre as parent_nombre',
+            ])
+            ->addSelect([
+                'stock_sucursal' => StockSucursal::select('cantidad')
+                    ->whereColumn('product_id', 'products.id')
+                    ->where('sucursal_id', $pdv->sucursal_id)
+                    ->limit(1),
+            ]);
+
+        $filas = CursorSync::aplicar($query, 'products', $pagina)->limit($pagina['limite'])->get();
+
+        return response()->json([
+            'data' => $filas->map(fn (Product $p) => ProductSyncResource::make($p)->resolve($request)
+                + ['activo' => (bool) $p->es_vendible && $p->getRawOriginal('deleted_at') === null]),
+            'total' => $filas->count(),
+            'next_cursor' => CursorSync::siguiente($filas->last(), $filas->count(), $pagina),
+            'synced_at' => CursorSync::marca($pagina['hasta']),
+        ]);
+    }
+
+    /**
+     * Listas de precios asignadas a la sucursal del POS autenticado y sus precios especiales.
+     *
+     * La caja reconstruye la tabla de precios entera (un precio borrado no deja rastro en
+     * updated_at), así que acá no hay delta sino páginas por id: `limit` + `cursor` (el último
+     * id). Sin limit/cursor, el contrato de siempre, en streaming.
+     */
+    public function precios(Request $request): StreamedResponse|JsonResponse
     {
         /** @var \App\Models\PuntoDeVenta $pdv */
         $pdv = $request->user();
-
-        $listasIds = $pdv->sucursal->listasPrecios()->pluck('listas_precios.id');
-
-        $query = DetallePrecio::with('product:id,codigo_interno')
-            ->whereIn('lista_precio_id', $listasIds);
-
-        if ($request->filled('updated_since')) {
-            $query->where('updated_at', '>', $request->updated_since);
-        }
+        $syncedAt = now();
 
         $listas = $pdv->sucursal->listasPrecios()->get()->map(fn ($lista) => [
             'id' => $lista->id,
             'nombre' => $lista->nombre,
             'factor' => $lista->factor,
             'es_default' => (bool) $lista->pivot->es_default,
-        ]);
+        ])->values();
 
-        return response()->json([
-            'listas' => $listas,
-            'precios' => PrecioSyncResource::collection($query->get()),
-            'synced_at' => now()->toIso8601String(),
-        ]);
+        $query = DetallePrecio::query()
+            ->leftJoin('products', 'products.id', '=', 'detalle_lista_precios.product_id')
+            ->whereIn('detalle_lista_precios.lista_precio_id', $listas->pluck('id'))
+            ->select([
+                'detalle_lista_precios.id', 'detalle_lista_precios.lista_precio_id', 'detalle_lista_precios.product_id',
+                'detalle_lista_precios.precio_override', 'detalle_lista_precios.vigencia_desde',
+                'detalle_lista_precios.vigencia_hasta', 'products.codigo_interno',
+            ]);
+
+        $fila = fn (DetallePrecio $p) => [
+            'lista_precio_id' => $p->lista_precio_id,
+            'product_id' => $p->product_id,
+            'codigo_interno' => $p->getRawOriginal('codigo_interno'),
+            'precio_override' => $p->precio_override,
+            'vigencia_desde' => $p->vigencia_desde?->toDateString(),
+            'vigencia_hasta' => $p->vigencia_hasta?->toDateString(),
+        ];
+
+        if ($request->filled('limit') || $request->filled('cursor')) {
+            $limite = max(1, min(CursorSync::LIMITE_MAXIMO, (int) ($request->query('limit') ?: 5000)));
+            $filas = $query->where('detalle_lista_precios.id', '>', (int) $request->query('cursor', 0))
+                ->orderBy('detalle_lista_precios.id')
+                ->limit($limite)
+                ->get();
+
+            return response()->json([
+                'listas' => $listas,
+                'precios' => $filas->map($fila)->values(),
+                'next_cursor' => $filas->count() === $limite ? (string) $filas->last()->id : null,
+                'synced_at' => CursorSync::marca($syncedAt),
+            ]);
+        }
+
+        if ($request->filled('updated_since')) {
+            $query->where('detalle_lista_precios.updated_at', '>', Carbon::parse((string) $request->query('updated_since'))->utc());
+        }
+
+        return response()->stream(function () use ($listas, $query, $fila, $syncedAt): void {
+            echo '{"listas":'.json_encode($listas, JSON_UNESCAPED_UNICODE).',"precios":[';
+            $total = 0;
+            foreach ($query->lazyById(1000, 'detalle_lista_precios.id', 'id') as $precio) {
+                echo ($total++ ? ',' : '').json_encode($fila($precio), JSON_UNESCAPED_UNICODE);
+            }
+            echo '],"synced_at":'.json_encode(CursorSync::marca($syncedAt)).'}';
+        }, 200, ['Content-Type' => 'application/json']);
     }
 
     /**
      * Stock de la sucursal del POS autenticado.
-     * Soporta delta sync con ?updated_since=ISO8601
+     *
+     * Con `updated_since` solo lo que cambió (el stock cambia mucho más que el catálogo y
+     * viaja aparte: product_id + cantidad). Con `limit`/`cursor`, por páginas ordenadas por
+     * (updated_at, id). Sin limit/cursor, el contrato de siempre, en streaming: antes armaba
+     * la colección entera y con 200.000 filas se quedaba sin memoria.
      */
-    public function stock(Request $request): JsonResponse
+    public function stock(Request $request): StreamedResponse|JsonResponse
     {
         /** @var \App\Models\PuntoDeVenta $pdv */
         $pdv = $request->user();
 
-        $query = StockSucursal::with('product:id,codigo_interno')
-            ->where('sucursal_id', $pdv->sucursal_id);
+        $query = StockSucursal::query()
+            ->leftJoin('products', 'products.id', '=', 'stock_sucursal.product_id')
+            ->where('stock_sucursal.sucursal_id', $pdv->sucursal_id)
+            ->select(['stock_sucursal.id', 'stock_sucursal.product_id', 'stock_sucursal.cantidad', 'stock_sucursal.updated_at', 'products.codigo_interno']);
 
-        if ($request->filled('updated_since')) {
-            $query->where('updated_at', '>', $request->updated_since);
+        $fila = fn (StockSucursal $s) => [
+            'product_id' => $s->product_id,
+            'codigo_interno' => $s->getRawOriginal('codigo_interno'),
+            'cantidad' => $s->cantidad,
+        ];
+
+        if ($request->filled('limit') || $request->filled('cursor')) {
+            try {
+                $pagina = CursorSync::desdeRequest($request, 5000);
+            } catch (\InvalidArgumentException) {
+                return response()->json(['message' => 'Cursor inválido.'], 422);
+            }
+
+            $filas = CursorSync::aplicar($query, 'stock_sucursal', $pagina)->limit($pagina['limite'])->get();
+
+            return response()->json([
+                'data' => $filas->map($fila)->values(),
+                'next_cursor' => CursorSync::siguiente($filas->last(), $filas->count(), $pagina),
+                'synced_at' => CursorSync::marca($pagina['hasta']),
+            ]);
         }
 
-        return response()->json([
-            'data' => StockSyncResource::collection($query->get()),
-            'synced_at' => now()->toIso8601String(),
-        ]);
+        $syncedAt = now();
+
+        if ($request->filled('updated_since')) {
+            $query->where('stock_sucursal.updated_at', '>', Carbon::parse((string) $request->query('updated_since'))->utc());
+        }
+
+        return response()->stream(function () use ($query, $fila, $syncedAt): void {
+            echo '{"data":[';
+            $total = 0;
+            foreach ($query->lazyById(2000, 'stock_sucursal.id', 'id') as $stock) {
+                echo ($total++ ? ',' : '').json_encode($fila($stock));
+            }
+            echo '],"synced_at":'.json_encode(CursorSync::marca($syncedAt)).'}';
+        }, 200, ['Content-Type' => 'application/json']);
     }
 
     /**
@@ -346,19 +466,8 @@ class SyncController extends Controller
                     'sincronizado_at' => $sincronizadoAt,
                 ]);
 
-                $stockSucursal = StockSucursal::firstOrNew([
-                    'sucursal_id' => $pdv->sucursal_id,
-                    'product_id' => $mov['product_id'],
-                ]);
-
-                $cantidadActual = $stockSucursal->cantidad ?? 0;
-                $nuevaCantidad = max(0, $cantidadActual + (int) $mov['cantidad']);
-
-                $stockSucursal->cantidad = $nuevaCantidad;
-                $stockSucursal->save();
-
-                $totalStock = StockSucursal::where('product_id', $mov['product_id'])->sum('cantidad');
-                Product::where('id', $mov['product_id'])->update(['stock' => $totalStock]);
+                StockSucursal::aplicarDelta($pdv->sucursal_id, (int) $mov['product_id'], (int) $mov['cantidad']);
+                Product::recalcularStock((int) $mov['product_id']);
 
                 $creados++;
 

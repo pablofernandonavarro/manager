@@ -12,6 +12,7 @@ class Index extends Component
     use WithPagination;
 
     public string $search = '';
+
     public int $perPage = 10;
 
     /**
@@ -32,12 +33,14 @@ class Index extends Component
         // No permitir eliminar roles del sistema
         if (in_array($role->name, ['admin', 'supervisor', 'cajero'])) {
             session()->flash('error', 'No puedes eliminar roles predeterminados del sistema.');
+
             return;
         }
 
         // Verificar si hay usuarios con este rol
         if ($role->users()->count() > 0) {
             session()->flash('error', 'No puedes eliminar un rol que tiene usuarios asignados.');
+
             return;
         }
 
@@ -51,7 +54,7 @@ class Index extends Component
     {
         $roles = Role::query()
             ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%');
+                $query->where('name', 'like', '%'.$this->search.'%');
             })
             ->withCount(['users', 'permissions'])
             ->orderBy('created_at', 'desc')

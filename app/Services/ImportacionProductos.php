@@ -42,7 +42,14 @@ class ImportacionProductos
 {
     public const COLUMNAS = ['modelo', 'codigo', 'nombre', 'color', 'talle', 'codigo_barras', 'precio', 'costo', 'iva'];
 
-    public const MAX_FILAS = 5000;
+    /**
+     * XLSX: PhpSpreadsheet vuelve a recorrer el archivo entero en cada lectura por tramos
+     * (el filtro ahorra memoria, no tiempo): el costo crece al cuadrado. 20.000 filas es
+     * razonable; más, en CSV, que se lee línea por línea y cada lote arranca en su byte.
+     */
+    public const MAX_FILAS_XLSX = 20000;
+
+    public const MAX_FILAS_CSV = 200000;
 
     /** En la e2-micro de producción 500 filas nuevas tardaron hasta 169 s; con 250, ~85 s. */
     public const FILAS_POR_LOTE = 250;
@@ -50,6 +57,9 @@ class ImportacionProductos
     private const FILAS_POR_LECTURA = 1000;
 
     private const IVAS = [0.0, 2.5, 5.0, 10.5, 21.0, 27.0];
+
+    /** @var array<string, true> valores de atributo ya verificados en este lote */
+    private array $valoresConocidos = [];
 
     public function __construct(
         private readonly ProductConfigurableService $configurables,
@@ -120,10 +130,14 @@ class ImportacionProductos
 
         $errores = $estructura['errores'];
 
+        $maximo = $this->esCsv($ruta) ? self::MAX_FILAS_CSV : self::MAX_FILAS_XLSX;
+
         if ($ultimaFila < 2) {
             $errores[] = 'El archivo está vacío o no tiene datos.';
-        } elseif ($ultimaFila - 1 > self::MAX_FILAS) {
-            $errores[] = 'El archivo tiene más de '.self::MAX_FILAS.' filas. Dividilo en partes.';
+        } elseif ($ultimaFila - 1 > $maximo) {
+            $errores[] = $this->esCsv($ruta)
+                ? 'El archivo tiene más de '.number_format($maximo, 0, ',', '.').' filas. Dividilo en partes.'
+                : 'Un Excel (.xlsx) admite hasta '.number_format($maximo, 0, ',', '.').' filas. Para más, guardalo como CSV (hasta '.number_format(self::MAX_FILAS_CSV, 0, ',', '.').').';
         }
 
         return ['errores' => $errores, 'ultima_fila' => $ultimaFila, 'columnas_stock' => $estructura['stock'] !== []];
@@ -167,31 +181,55 @@ class ImportacionProductos
      * Recorre todo el archivo por tramos: cuenta las filas con datos y marca las repetidas
      * (misma variante, código o código de barras que una fila anterior). Esas filas son error.
      *
-     * @return array{total: int, ultima_fila: int, repetidas: array<int, array{codigo: ?string, mensaje: string, datos: array<string, string>}>}
+     * En CSV devuelve además `offsets`: el byte donde empieza cada lote, para que cada lote lea
+     * solo su tramo en vez de recorrer el archivo desde el principio.
+     *
+     * @return array{total: int, ultima_fila: int, repetidas: array<int, array{codigo: ?string, mensaje: string, datos: array<string, string>}>, offsets: array<int, int>}
      */
     public function repetidas(string $ruta): array
     {
         $estructura = $this->estructura($ruta);
-        $ultima = $this->ultimaFila($ruta);
         $vistos = [];
         $repetidas = [];
+        $offsets = [];
         $total = 0;
+
+        $revisar = function (array $fila, int $n) use (&$total, &$repetidas, &$vistos, $estructura): void {
+            $total++;
+
+            if ($mensajes = $this->repetidaEnArchivo($fila, $n, $estructura, $vistos)) {
+                $repetidas[$n] = [
+                    'codigo' => $this->codigoDeFila($fila, $estructura),
+                    'mensaje' => implode(' ', $mensajes),
+                    'datos' => $this->datosDeFila($fila, $estructura),
+                ];
+            }
+        };
+
+        if ($this->esCsv($ruta)) {
+            $ultima = 1;
+            foreach ($this->recorrerCsv($ruta, 2) as [$n, $fila, $byte]) {
+                if (($n - 2) % self::FILAS_POR_LOTE === 0) {
+                    $offsets[$n] = $byte;
+                }
+                $ultima = $n;
+                if ($this->filaConDatos($fila)) {
+                    $revisar($fila, $n);
+                }
+            }
+
+            return ['total' => $total, 'ultima_fila' => $ultima, 'repetidas' => $repetidas, 'offsets' => $offsets];
+        }
+
+        $ultima = $this->ultimaFila($ruta);
 
         for ($desde = 2; $desde <= $ultima; $desde += self::FILAS_POR_LECTURA) {
             foreach ($this->leerFilas($ruta, $desde, min($ultima, $desde + self::FILAS_POR_LECTURA - 1)) as $n => $fila) {
-                $total++;
-
-                if ($mensajes = $this->repetidaEnArchivo($fila, $n, $estructura, $vistos)) {
-                    $repetidas[$n] = [
-                        'codigo' => $this->codigoDeFila($fila, $estructura),
-                        'mensaje' => implode(' ', $mensajes),
-                        'datos' => $this->datosDeFila($fila, $estructura),
-                    ];
-                }
+                $revisar($fila, $n);
             }
         }
 
-        return ['total' => $total, 'ultima_fila' => $ultima, 'repetidas' => $repetidas];
+        return ['total' => $total, 'ultima_fila' => $ultima, 'repetidas' => $repetidas, 'offsets' => []];
     }
 
     /**
@@ -202,15 +240,16 @@ class ImportacionProductos
      * @param  callable(int, ?string, string, array<string, string>): void  $registrarError
      * @return array{procesadas: int, exitosas: int, errores: int, creados: int, actualizados: int, modelos: int, stock: int}
      */
-    public function procesarLote(string $ruta, int $desde, int $hasta, array $saltear, callable $registrarError, ?int $usuarioId, string $referencia): array
+    public function procesarLote(string $ruta, int $desde, int $hasta, array $saltear, callable $registrarError, ?int $usuarioId, string $referencia, ?int $offset = null): array
     {
         $estructura = $this->estructura($ruta);
         $atributos = $this->atributosDeVariante();
         $conteo = ['procesadas' => 0, 'exitosas' => 0, 'errores' => 0, 'creados' => 0, 'actualizados' => 0, 'modelos' => 0, 'stock' => 0];
         $ajustes = [];
         $ajustesNuevos = [];
+        $this->valoresConocidos = [];
 
-        foreach ($this->leerFilas($ruta, $desde, $hasta) as $n => $fila) {
+        foreach ($this->leerFilas($ruta, $desde, $hasta, $offset) as $n => $fila) {
             $conteo['procesadas']++;
 
             if (isset($saltear[$n])) {
@@ -569,7 +608,7 @@ class ImportacionProductos
         }
 
         if ($cambios) {
-            Product::whereKey($productoId)->update(['stock' => StockSucursal::where('product_id', $productoId)->sum('cantidad')]);
+            Product::recalcularStock($productoId);
         }
 
         return $cambios;
@@ -577,7 +616,14 @@ class ImportacionProductos
 
     private function asegurarValor(AttributeType $tipo, string $valor): void
     {
+        // Cache por lote: 250 filas de un mismo modelo repiten los mismos colores y talles.
+        $clave = $tipo->id.'|'.Str::lower($valor);
+        if (isset($this->valoresConocidos[$clave])) {
+            return;
+        }
+
         $existe = AttributeValue::where('attribute_type_id', $tipo->id)->where('valor', $valor)->exists();
+        $this->valoresConocidos[$clave] = true;
 
         if (! $existe) {
             AttributeValue::create([
@@ -634,18 +680,95 @@ class ImportacionProductos
 
     private function ultimaFila(string $ruta): int
     {
+        if ($this->esCsv($ruta)) {
+            $ultima = 0;
+            foreach ($this->recorrerCsv($ruta, 1) as [$n]) {
+                $ultima = $n;
+            }
+
+            return $ultima;
+        }
+
         $info = IOFactory::createReaderForFile($ruta)->listWorksheetInfo($ruta);
 
         return (int) ($info[0]['totalRows'] ?? 0);
     }
 
+    private function esCsv(string $ruta): bool
+    {
+        return in_array(strtolower(pathinfo($ruta, PATHINFO_EXTENSION)), ['csv', 'txt'], true);
+    }
+
+    /** @param  list<mixed>  $fila */
+    private function filaConDatos(array $fila): bool
+    {
+        return collect($fila)->contains(fn ($v) => trim((string) $v) !== '');
+    }
+
+    /**
+     * Recorre un CSV registro por registro sin cargarlo: [número de fila, celdas, byte donde
+     * empieza el registro]. Separador `;` o `,` según el encabezado (Excel en español guarda
+     * con `;`); acepta UTF-8 con o sin BOM y Windows-1252.
+     *
+     * @return \Generator<int, array{0: int, 1: list<string>, 2: int}>
+     */
+    private function recorrerCsv(string $ruta, int $desde, ?int $offset = null): \Generator
+    {
+        $archivo = fopen($ruta, 'rb');
+
+        try {
+            $primera = (string) fgets($archivo);
+            $separador = substr_count($primera, ';') >= substr_count($primera, ',') ? ';' : ',';
+            $bom = str_starts_with($primera, "\xEF\xBB\xBF") ? 3 : 0;
+
+            if ($offset !== null && $offset > 0) {
+                fseek($archivo, $offset);
+                $n = $desde - 1;
+            } else {
+                fseek($archivo, $bom);
+                $n = 0;
+            }
+
+            while (true) {
+                $byte = ftell($archivo);
+                $celdas = fgetcsv($archivo, null, $separador, '"', '');
+                if ($celdas === false) {
+                    break;
+                }
+                $n++;
+                if ($n < $desde) {
+                    continue;
+                }
+
+                yield [$n, array_map(fn ($v) => $v === null ? '' : (mb_check_encoding($v, 'UTF-8') ? $v : mb_convert_encoding($v, 'UTF-8', 'Windows-1252')), $celdas), $byte];
+            }
+        } finally {
+            fclose($archivo);
+        }
+    }
+
     /**
      * Lee solo las filas [$desde, $hasta] de la primera hoja, sin cargar el resto del archivo.
+     * En CSV, con `$offset` (byte donde empieza `$desde`) va directo a esa fila.
      *
      * @return array<int, list<mixed>> fila de Excel => celdas (A = 0); sin las filas vacías
      */
-    private function leerFilas(string $ruta, int $desde, int $hasta): array
+    private function leerFilas(string $ruta, int $desde, int $hasta, ?int $offset = null): array
     {
+        if ($this->esCsv($ruta)) {
+            $filas = [];
+            foreach ($this->recorrerCsv($ruta, $desde, $offset) as [$n, $celdas]) {
+                if ($n > $hasta) {
+                    break;
+                }
+                if ($this->filaConDatos($celdas)) {
+                    $filas[$n] = $celdas;
+                }
+            }
+
+            return $filas;
+        }
+
         $lector = IOFactory::createReaderForFile($ruta);
         $lector->setReadDataOnly(true);
         $lector->setReadFilter(new class($desde, $hasta) implements IReadFilter

@@ -17,6 +17,7 @@ use App\Livewire\Configuration\ProductSettings;
 use App\Livewire\Configuration\Subgrupos;
 use App\Livewire\Configuration\Targets;
 use App\Livewire\Configuration\Temporadas;
+use App\Livewire\Dashboard;
 use App\Livewire\Facturacion\Comprobantes as FacturacionComprobantes;
 use App\Livewire\Facturacion\Configuracion as FacturacionConfiguracion;
 use App\Livewire\ListasPrecios\Buscador as ListasPreciosBuscador;
@@ -25,14 +26,11 @@ use App\Livewire\ListasPrecios\Index as ListasPreciosIndex;
 use App\Livewire\Permissions\Index as PermissionsIndex;
 use App\Livewire\Products\Create as ProductsCreate;
 use App\Livewire\Products\Edit as ProductsEdit;
+use App\Livewire\Products\Importar as ProductsImportar;
 use App\Livewire\Products\Index as ProductsIndex;
 use App\Livewire\Products\Precios as ProductsPrecios;
 use App\Livewire\Products\Show as ProductsShow;
-use App\Livewire\Dashboard;
-use App\Livewire\Products\Importar as ProductsImportar;
 use App\Livewire\Products\Stock as ProductsStock;
-use App\Services\ImportacionProductos;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 use App\Livewire\Promociones\Index as PromocionesIndex;
 use App\Livewire\PuntosDeVenta\Index as PuntosDeVentaIndex;
 use App\Livewire\Reportes\Ventas as ReportesVentas;
@@ -51,9 +49,11 @@ use App\Livewire\Users\Edit;
 use App\Livewire\Users\Index;
 use App\Livewire\Ventas\PorArticulo as VentasPorArticulo;
 use App\Models\Remito;
+use App\Services\ImportacionProductos;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 
 // Redirección de la raíz al dashboard
 Route::get('/', function () {
@@ -88,8 +88,15 @@ Route::middleware('auth')->group(function () {
     // Antes de /productos/{productId}, si no "stock" se toma como un id.
     Route::get('/productos/stock', ProductsStock::class)->name('productos.stock');
     Route::get('/productos/importar', ProductsImportar::class)->middleware('can:productos.crear')->name('productos.importar');
-    Route::get('/productos/importar/plantilla', function (ImportacionProductos $importacion) {
+    Route::get('/productos/importar/plantilla', function (\Illuminate\Http\Request $request, ImportacionProductos $importacion) {
         $libro = $importacion->plantilla();
+
+        // CSV para archivos grandes (más de 20.000 filas): mismo encabezado, separado por ;.
+        if ($request->query('formato') === 'csv') {
+            return response()->streamDownload(function () use ($libro): void {
+                echo "\xEF\xBB\xBF".implode(';', $libro->getSheet(0)->toArray()[0])."\r\n";
+            }, 'plantilla-productos.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }
 
         return response()->streamDownload(
             fn () => (new XlsxWriter($libro))->save('php://output'),

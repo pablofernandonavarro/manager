@@ -19,7 +19,7 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         $nombre = fake()->words(3, true);
-        $codigoInterno = 'ART-' . fake()->unique()->numberBetween(1000, 9999);
+        $codigoInterno = 'ART-'.fake()->unique()->numberBetween(1000, 9999);
 
         return [
             // Tipo de producto
@@ -29,7 +29,7 @@ class ProductFactory extends Factory
             // Información básica
             'nombre' => ucfirst($nombre),
             'codigo_interno' => $codigoInterno,
-            'busqueda' => strtolower($nombre . ' ' . $codigoInterno),
+            'busqueda' => strtolower($nombre.' '.$codigoInterno),
             'codigo_barras' => fake()->ean13(),
             'descripcion_web' => fake()->sentence(),
             'descripcion_tecnica' => fake()->paragraph(),
@@ -135,14 +135,14 @@ class ProductFactory extends Factory
     public function variantOf(Product $configurable, string $color, int $talleId, string $talleNombre): static
     {
         return $this->state(function (array $attributes) use ($configurable, $color, $talleId, $talleNombre) {
-            $codigoInterno = $configurable->codigo_interno . '-' . strtoupper(substr($color, 0, 3)) . '-' . $talleNombre;
+            $codigoInterno = $configurable->codigo_interno.'-'.strtoupper(substr($color, 0, 3)).'-'.$talleNombre;
 
             return [
                 'product_type' => ProductType::SIMPLE,
                 'parent_id' => $configurable->id,
-                'nombre' => $configurable->nombre . ' - ' . ucfirst($color) . ' - ' . $talleNombre,
+                'nombre' => $configurable->nombre.' - '.ucfirst($color).' - '.$talleNombre,
                 'codigo_interno' => $codigoInterno,
-                'busqueda' => strtolower($configurable->nombre . ' ' . $color . ' ' . $talleNombre . ' ' . $codigoInterno),
+                'busqueda' => strtolower($configurable->nombre.' '.$color.' '.$talleNombre.' '.$codigoInterno),
                 'color' => ucfirst($color),
                 'metadata_detalle2' => $talleId,
                 'n_talle' => $talleNombre,

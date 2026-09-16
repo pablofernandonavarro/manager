@@ -12,8 +12,11 @@ class Buscador extends Component
     use WithPagination;
 
     public ListaPrecio $lista;
+
     public string $busqueda = '';
+
     public string $ordenar = 'nombre';
+
     public bool $soloConStock = false;
 
     public function mount($id)

@@ -12,6 +12,7 @@ class Index extends Component
     use WithPagination;
 
     public string $search = '';
+
     public int $perPage = 10;
 
     /**
@@ -27,7 +28,7 @@ class Index extends Component
     {
         $permissions = Permission::query()
             ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%');
+                $query->where('name', 'like', '%'.$this->search.'%');
             })
             ->orderBy('name', 'asc')
             ->paginate($this->perPage);

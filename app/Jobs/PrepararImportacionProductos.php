@@ -64,6 +64,8 @@ class PrepararImportacionProductos implements ShouldQueue
                 ++$numero,
                 $desde,
                 min($recorrido['ultima_fila'], $desde + ImportacionProductos::FILAS_POR_LOTE - 1),
+                // CSV: el byte donde arranca el lote, así no se relee el archivo desde el principio.
+                $recorrido['offsets'][$desde] ?? null,
             );
         }
 

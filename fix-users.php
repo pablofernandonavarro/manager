@@ -16,8 +16,8 @@ echo "✅ Usuarios actualizados correctamente!\n";
 
 // Mostrar todos los usuarios
 $users = \App\Models\User::withTrashed()->get();
-echo "\nTotal de usuarios: " . $users->count() . "\n\n";
+echo "\nTotal de usuarios: ".$users->count()."\n\n";
 
 foreach ($users as $user) {
-    echo "ID: {$user->id} | {$user->name} | {$user->email} | Activo: " . ($user->active ? 'Sí' : 'No') . "\n";
+    echo "ID: {$user->id} | {$user->name} | {$user->email} | Activo: ".($user->active ? 'Sí' : 'No')."\n";
 }

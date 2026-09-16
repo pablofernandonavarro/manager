@@ -102,22 +102,13 @@ class RegistroVentasPos
                 'sincronizado_at' => $sincronizadoAt,
             ]);
 
-            $stockSucursal = StockSucursal::firstOrNew([
-                'sucursal_id' => $pdv->sucursal_id,
-                'product_id' => $item['product_id'],
-            ]);
-
-            $stockSucursal->cantidad = max(0, ($stockSucursal->cantidad ?? 0) - abs((int) $item['cantidad']));
-            $stockSucursal->save();
+            StockSucursal::aplicarDelta($pdv->sucursal_id, (int) $item['product_id'], -abs((int) $item['cantidad']));
 
             $productIds[] = $item['product_id'];
         }
 
-        // Recalcular stock global desde suma de stock_sucursal
-        foreach (array_unique($productIds) as $productId) {
-            $totalStock = StockSucursal::where('product_id', $productId)->sum('cantidad');
-            Product::where('id', $productId)->update(['stock' => $totalStock]);
-        }
+        // Stock global = suma de stock_sucursal, sin tocar el updated_at del catálogo.
+        Product::recalcularStock($productIds);
 
         return $venta;
     }

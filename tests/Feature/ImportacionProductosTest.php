@@ -229,9 +229,9 @@ class ImportacionProductosTest extends TestCase
         // Primer intento: el lote escribe productos y se corta antes de terminar.
         $this->app->bind(ImportacionProductos::class, fn ($app) => new class($app->make(\App\Services\ProductConfigurableService::class)) extends ImportacionProductos
         {
-            public function procesarLote(string $ruta, int $desde, int $hasta, array $saltear, callable $registrarError, ?int $usuarioId, string $referencia): array
+            public function procesarLote(string $ruta, int $desde, int $hasta, array $saltear, callable $registrarError, ?int $usuarioId, string $referencia, ?int $offset = null): array
             {
-                parent::procesarLote($ruta, $desde, $hasta, $saltear, $registrarError, $usuarioId, $referencia);
+                parent::procesarLote($ruta, $desde, $hasta, $saltear, $registrarError, $usuarioId, $referencia, $offset);
 
                 throw new \RuntimeException('Se cortó la conexión a mitad del lote');
             }

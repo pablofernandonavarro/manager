@@ -37,6 +37,7 @@ class ProcesarLoteImportacionProductos implements ShouldQueue
         public int $lote,
         public int $desde,
         public int $hasta,
+        public ?int $offset = null,
     ) {}
 
     /** @return array<int, int> */
@@ -83,6 +84,7 @@ class ProcesarLoteImportacionProductos implements ShouldQueue
                 ]),
                 $registro->user_id,
                 $registro->referencia(),
+                $this->offset,
             );
 
             ImportacionProductoLote::create([

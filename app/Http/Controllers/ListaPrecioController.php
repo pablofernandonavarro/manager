@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ListaPrecio;
 use App\Models\Product;
-use Illuminate\Http\Request;
 
 class ListaPrecioController extends Controller
 {

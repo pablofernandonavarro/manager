@@ -11,7 +11,7 @@ echo "Agregando columna 'active' a la tabla users...\n";
 
 try {
     // Agregar columna active
-    if (!\Schema::hasColumn('users', 'active')) {
+    if (! \Schema::hasColumn('users', 'active')) {
         \DB::statement('ALTER TABLE users ADD COLUMN active TINYINT(1) DEFAULT 1 AFTER email');
         echo "✅ Columna 'active' agregada correctamente\n";
     } else {
@@ -19,7 +19,7 @@ try {
     }
 
     // Agregar columna deleted_at
-    if (!\Schema::hasColumn('users', 'deleted_at')) {
+    if (! \Schema::hasColumn('users', 'deleted_at')) {
         \DB::statement('ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP NULL AFTER updated_at');
         echo "✅ Columna 'deleted_at' agregada correctamente\n";
     } else {
@@ -34,8 +34,8 @@ try {
 
     // Mostrar usuarios
     $users = \App\Models\User::withTrashed()->get();
-    echo "Total de usuarios: " . $users->count() . "\n";
+    echo 'Total de usuarios: '.$users->count()."\n";
 
 } catch (\Exception $e) {
-    echo "❌ Error: " . $e->getMessage() . "\n";
+    echo '❌ Error: '.$e->getMessage()."\n";
 }

@@ -54,6 +54,7 @@ class ProductImage extends Model
         if ($this->is_swatch) {
             $roles[] = 'swatch';
         }
+
         return $roles;
     }
 }

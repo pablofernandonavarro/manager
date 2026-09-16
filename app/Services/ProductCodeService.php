@@ -22,7 +22,7 @@ class ProductCodeService
      */
     public function generateCode(): string
     {
-        if (!$this->config->auto_generate_code) {
+        if (! $this->config->auto_generate_code) {
             return '';
         }
 
@@ -45,11 +45,11 @@ class ProductCodeService
      */
     public function validateUniqueCode(?string $code): bool
     {
-        if (!$this->config->require_unique_code || empty($code)) {
+        if (! $this->config->require_unique_code || empty($code)) {
             return true;
         }
 
-        return !Product::where('codigo_interno', $code)->exists();
+        return ! Product::where('codigo_interno', $code)->exists();
     }
 
     /**
@@ -57,11 +57,11 @@ class ProductCodeService
      */
     public function validateUniqueBarcode(?string $barcode): bool
     {
-        if (!$this->config->require_unique_barcode || empty($barcode)) {
+        if (! $this->config->require_unique_barcode || empty($barcode)) {
             return true;
         }
 
-        return !Product::where('codigo_barras', $barcode)->exists();
+        return ! Product::where('codigo_barras', $barcode)->exists();
     }
 
     /**
@@ -95,14 +95,14 @@ class ProductCodeService
 
         // Aplicar solo si no están definidos en $data
         foreach ($defaults as $key => $value) {
-            if (!isset($data[$key]) || $data[$key] === null || $data[$key] === '') {
+            if (! isset($data[$key]) || $data[$key] === null || $data[$key] === '') {
                 $data[$key] = $value;
             }
         }
 
         // Calcular precio automáticamente si está habilitado
         if ($this->config->auto_calculate_price && isset($data['costo']) && $data['costo'] > 0) {
-            if (!isset($data['precio']) || $data['precio'] === null || $data['precio'] == 0) {
+            if (! isset($data['precio']) || $data['precio'] === null || $data['precio'] == 0) {
                 $data['precio'] = $this->config->calculatePrice($data['costo']);
             }
         }

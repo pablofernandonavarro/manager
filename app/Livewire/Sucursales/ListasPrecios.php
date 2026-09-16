@@ -10,7 +10,9 @@ use Livewire\Component;
 class ListasPrecios extends Component
 {
     public array $sucursales = [];
+
     public array $listasPrecios = [];
+
     public array $asignaciones = []; // [sucursal_id => [lista_id => ['asignado' => bool, 'es_default' => bool]]]
 
     public function mount(): void

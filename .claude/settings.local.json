@@ -1,11 +1,20 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(docker compose:*)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.config\\\\herd\\\\bin\\\\php84.bat\" artisan test --filter=\"ImportacionProductos|Sync\" --compact)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.config\\\\herd\\\\bin\\\\php84.bat\" artisan test --compact --filter=\"ImportacionProductos|Sync\")",
+      "PowerShell(head *)",
+      "PowerShell(docker compose up *)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.config\\\\herd\\\\bin\\\\php84.bat\" artisan test --compact tests/Feature/ImportacionProductosTest.php)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.config\\\\herd\\\\bin\\\\php84.bat\" artisan test --compact tests/Feature/SyncIncrementalTest.php)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.config\\\\herd\\\\bin\\\\php84.bat\" ./vendor/bin/pint --format agent)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "laravel-boost"
-  ],
-  "permissions": {
-    "allow": [
-      "Bash(docker compose:*)"
-    ]
-  }
+  ]
 }

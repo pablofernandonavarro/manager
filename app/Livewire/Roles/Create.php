@@ -29,7 +29,7 @@ class Create extends Component
         $role = Role::create(['name' => strtolower($this->name)]);
 
         // Asignar permisos seleccionados
-        if (!empty($this->selectedPermissions)) {
+        if (! empty($this->selectedPermissions)) {
             $role->givePermissionTo($this->selectedPermissions);
         }
 

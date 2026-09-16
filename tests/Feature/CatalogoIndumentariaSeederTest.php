@@ -109,10 +109,13 @@ class CatalogoIndumentariaSeederTest extends TestCase
 
         $this->assertNull($datos->firstWhere('codigo_interno', 'CONF-4301'), 'el configurable no viaja');
 
-        // Delta: solo lo modificado después de updated_since.
-        $this->travel(5)->minutes();
+        // Delta: solo lo modificado después de updated_since. synced_at trae 15 minutos de margen
+        // (transacciones largas), así que la marca se toma pasado ese margen.
+        $this->travel(20)->minutes();
+        $marca = json_decode($this->withToken($token)->getJson('/api/v1/sync/productos')->assertOk()->streamedContent(), true)['synced_at'];
+        $this->travel(1)->minutes();
         Product::where('codigo_interno', 'PANT-001')->first()->update(['precio' => 31000]);
-        $delta = json_decode($this->withToken($token)->getJson('/api/v1/sync/productos?updated_since='.urlencode($cuerpo['synced_at']))->assertOk()->streamedContent(), true);
+        $delta = json_decode($this->withToken($token)->getJson('/api/v1/sync/productos?updated_since='.urlencode($marca))->assertOk()->streamedContent(), true);
         $this->assertSame(['PANT-001'], array_column($delta['data'], 'codigo_interno'));
         $this->assertEquals(31000, $delta['data'][0]['precio']);
 

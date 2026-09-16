@@ -280,6 +280,28 @@ class Product extends Model
     }
 
     /**
+     * Recalcula `products.stock` (la suma de `stock_sucursal`) sin tocar `updated_at`.
+     *
+     * updated_at marca cambios de CATÁLOGO: es lo que la caja pide cada 5 minutos. El stock
+     * viaja por su lado (stock_sucursal.updated_at); si cada venta o remito movía la fecha del
+     * producto, el catálogo volvía a bajar por cambios que no son de catálogo.
+     *
+     * @param  int|array<int, int>  $productIds
+     */
+    public static function recalcularStock(int|array $productIds): void
+    {
+        $ids = array_values(array_unique((array) $productIds));
+
+        if ($ids === []) {
+            return;
+        }
+
+        static::query()->toBase()->whereIn('id', $ids)->update([
+            'stock' => \Illuminate\Support\Facades\DB::raw('(select coalesce(sum(s.cantidad), 0) from stock_sucursal s where s.product_id = products.id)'),
+        ]);
+    }
+
+    /**
      * Construye el campo de búsqueda concatenando todos los atributos relevantes.
      */
     public function buildBusqueda(): string

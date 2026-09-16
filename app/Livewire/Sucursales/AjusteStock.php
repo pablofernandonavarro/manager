@@ -248,8 +248,7 @@ class AjusteStock extends Component
                     'fecha' => now(),
                 ]);
 
-                $totalGlobal = StockSucursal::where('product_id', $productId)->sum('cantidad');
-                Product::where('id', $productId)->update(['stock' => $totalGlobal]);
+                Product::recalcularStock((int) $productId);
             }
         });
 
@@ -414,8 +413,7 @@ class AjusteStock extends Component
                     ]);
                 }
 
-                $totalGlobal = StockSucursal::where('product_id', $fila['product_id'])->sum('cantidad');
-                Product::where('id', $fila['product_id'])->update(['stock' => $totalGlobal]);
+                Product::recalcularStock((int) $fila['product_id']);
             }
         });
 

@@ -12,13 +12,21 @@
                 Una fila por artículo. Sin <strong>modelo</strong> es un producto simple (se busca por <strong>codigo</strong>);
                 con modelo es una variante color + talle. Los productos que ya existen se actualizan. Las columnas
                 <strong>stock &lt;sucursal&gt;</strong> dejan el stock en ese número; vacío no se toca.
+                Excel hasta {{ number_format(\App\Services\ImportacionProductos::MAX_FILAS_XLSX, 0, ',', '.') }} filas; para más, CSV
+                (hasta {{ number_format(\App\Services\ImportacionProductos::MAX_FILAS_CSV, 0, ',', '.') }}).
             </p>
         </div>
-        <a href="{{ route('productos.importar.plantilla') }}"
-           class="mt-4 sm:mt-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 whitespace-nowrap">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Descargar plantilla
-        </a>
+        <div class="mt-4 sm:mt-0 flex flex-wrap gap-2">
+            <a href="{{ route('productos.importar.plantilla') }}"
+               class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Plantilla Excel
+            </a>
+            <a href="{{ route('productos.importar.plantilla', ['formato' => 'csv']) }}"
+               class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 whitespace-nowrap">
+                Plantilla CSV
+            </a>
+        </div>
     </div>
 
     @if($importaciones->isNotEmpty())

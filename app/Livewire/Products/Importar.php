@@ -53,9 +53,10 @@ class Importar extends Component
         $this->authorize('productos.crear');
 
         $this->reset(['previa', 'totalFilas', 'errores', 'avisos', 'resumen']);
-        $this->validate(['archivo' => 'required|file|mimes:xlsx,xls,csv|max:10240'], [
+        // txt: un CSV se detecta como text/plain. 50 MB alcanza para 200.000 filas en CSV.
+        $this->validate(['archivo' => 'required|file|mimes:xlsx,xls,csv,txt|max:51200'], [
             'archivo.mimes' => 'Subí un archivo Excel (.xlsx o .xls) o CSV.',
-            'archivo.max' => 'El archivo no puede pesar más de 10 MB.',
+            'archivo.max' => 'El archivo no puede pesar más de 50 MB.',
         ]);
 
         $inspeccion = $importacion->inspeccionar($this->archivo->getRealPath());

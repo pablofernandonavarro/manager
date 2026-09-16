@@ -84,6 +84,7 @@ class ProductService
     public function createConfigurableWithVariants(array $configurableData, array $variants): Product
     {
         $service = app(ProductConfigurableService::class);
+
         return $service->createConfigurableWithVariants($configurableData, $variants);
     }
 
@@ -92,7 +93,7 @@ class ProductService
      */
     public function addVariants(Product $configurable, array $variants): void
     {
-        if (!$configurable->isConfigurable()) {
+        if (! $configurable->isConfigurable()) {
             throw new \InvalidArgumentException('El producto debe ser de tipo CONFIGURABLE');
         }
 
@@ -105,11 +106,11 @@ class ProductService
      */
     public function attachToConfigurable(Product $simple, Product $configurable): Product
     {
-        if (!$simple->isSimple()) {
+        if (! $simple->isSimple()) {
             throw new \InvalidArgumentException('El producto debe ser de tipo SIMPLE');
         }
 
-        if (!$configurable->isConfigurable()) {
+        if (! $configurable->isConfigurable()) {
             throw new \InvalidArgumentException('El padre debe ser de tipo CONFIGURABLE');
         }
 
@@ -123,7 +124,7 @@ class ProductService
      */
     public function detachFromConfigurable(Product $variant): Product
     {
-        if (!$variant->isSimple() || !$variant->parent_id) {
+        if (! $variant->isSimple() || ! $variant->parent_id) {
             throw new \InvalidArgumentException('El producto debe ser una variante con padre asignado');
         }
 
