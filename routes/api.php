@@ -48,6 +48,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('sync/cobros-cuenta-corriente', [PosClientesController::class, 'cobros']);
         Route::post('sync/devoluciones', [PosDevolucionesController::class, 'sync']);
         Route::post('sync/turnos', [PosTurnosController::class, 'sync']);
+        Route::get('sync/sucursales', [SyncController::class, 'sucursales']);
         Route::get('precios/{productId}', [SyncController::class, 'precio']);
 
         // Canal de órdenes: la caja pregunta qué tiene pendiente y reporta el resultado.
@@ -55,8 +56,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('pos/estado', [PosEstadoController::class, 'reportar']);
         Route::post('pos/comandos/{comando}/resultado', [PosComandosController::class, 'resultado']);
 
-        // Remitos que vienen en camino a la sucursal de la caja, y su recepción.
+        // Remitos: envío y recepción desde cajas.
         Route::get('pos/remitos', [PosRemitosController::class, 'index']);
+        Route::post('pos/remitos', [PosRemitosController::class, 'store']);
+        Route::get('pos/remitos/configuracion', [PosRemitosController::class, 'configuracion']);
         Route::post('pos/remitos/{remito}/recibir', [PosRemitosController::class, 'recibir'])->whereNumber('remito');
 
         // Facturación electrónica: la caja pide la factura al Manager, que habla con AFIP.

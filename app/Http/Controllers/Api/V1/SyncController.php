@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\PromocionBancaria;
 use App\Models\Remito;
 use App\Models\StockSucursal;
+use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\RegistroVentasPos;
 use App\Services\RemitoService;
@@ -526,6 +527,16 @@ class SyncController extends Controller
                 ->where('product_id', $productId)
                 ->whereNull('vigencia_desde')->orWhere('vigencia_desde', '<=', now()->toDateString())
                 ->exists(),
+        ]);
+    }
+
+    public function sucursales(): JsonResponse
+    {
+        $sucursales = Sucursal::where('activo', true)
+            ->get(['id', 'nombre', 'is_central']);
+
+        return response()->json([
+            'data' => $sucursales,
         ]);
     }
 }
