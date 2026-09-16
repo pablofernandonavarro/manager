@@ -33,6 +33,7 @@ use App\Livewire\Products\Show as ProductsShow;
 use App\Livewire\Products\Stock as ProductsStock;
 use App\Livewire\Promociones\Index as PromocionesIndex;
 use App\Livewire\PuntosDeVenta\Index as PuntosDeVentaIndex;
+use App\Livewire\Remitos\Configuracion as RemitosConfiguracion;
 use App\Livewire\Reportes\Ventas as ReportesVentas;
 use App\Livewire\Roles\Create as RolesCreate;
 use App\Livewire\Roles\Edit as RolesEdit;
@@ -155,6 +156,8 @@ Route::middleware('auth')->group(function () {
 
         return view('remitos.imprimir', compact('remito'));
     })->middleware('can:remitos.ver')->whereNumber('id')->name('remitos.imprimir');
+    Route::get('/remitos/configuracion', RemitosConfiguracion::class)
+        ->middleware('can:remitos.configurar')->name('remitos.configuracion');
     Route::get('/sucursales/{id}/editar', SucursalesEdit::class)->name('sucursales.edit');
 
     // Puntos de venta
