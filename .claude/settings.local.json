@@ -10,7 +10,12 @@
       "PowerShell(& \"$env:USERPROFILE\\\\.config\\\\herd\\\\bin\\\\php84.bat\" artisan test --compact tests/Feature/SyncIncrementalTest.php)",
       "PowerShell(& \"$env:USERPROFILE\\\\.config\\\\herd\\\\bin\\\\php84.bat\" ./vendor/bin/pint --format agent)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(powershell -NoProfile -Command \"Test-Path 'C:\\\\Users\\\\Pablo Navarro\\\\.claude\\\\plans'\")",
+      "PowerShell(cd C:\\\\MisLaravel\\\\manager; & \"$env:USERPROFILE\\\\.config\\\\herd\\\\bin\\\\php84.bat\" artisan migrate --step)",
+      "PowerShell(tail *)",
+      "PowerShell(grep *)"
     ]
   },
   "enableAllProjectMcpServers": true,

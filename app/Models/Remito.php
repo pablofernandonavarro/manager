@@ -13,6 +13,8 @@ class Remito extends Model
         'sucursal_origen_id',
         'sucursal_destino_id',
         'user_id',
+        'creado_por_punto_de_venta_id',
+        'remito_origen_id',
         'estado',
         'observaciones',
         'remitido_at',
@@ -53,6 +55,21 @@ class Remito extends Model
     public function confirmadoPorCaja(): BelongsTo
     {
         return $this->belongsTo(PuntoDeVenta::class, 'confirmado_por_punto_de_venta_id');
+    }
+
+    public function creadoPorCaja(): BelongsTo
+    {
+        return $this->belongsTo(PuntoDeVenta::class, 'creado_por_punto_de_venta_id');
+    }
+
+    public function remitoOrigen(): BelongsTo
+    {
+        return $this->belongsTo(Remito::class, 'remito_origen_id');
+    }
+
+    public function hijos(): HasMany
+    {
+        return $this->hasMany(Remito::class, 'remito_origen_id');
     }
 
     public function detalles(): HasMany

@@ -335,9 +335,190 @@ class RemitosTest extends TestCase
         $this->get(route('remitos.imprimir', $remito->id))->assertForbidden();
     }
 
+    public function test_confirmar_con_cantidad_parcial_deja_el_resto_rechazado(): void
+    {
+        $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [
+            $this->zapatillas->id => 10,
+        ]);
+
+        // Centro confirma recibir solo 6 de 10
+        $remito = $this->servicio()->confirmar($remito, cantidadesRecibidas: [
+            $this->zapatillas->id => 6,
+        ]);
+
+        $this->assertSame(EstadoRemito::Confirmado, $remito->estado);
+
+        $detalle = $remito->detalles()->first();
+        $this->assertSame(6, $detalle->cantidad_recibida);
+        $this->assertSame(4, $detalle->cantidad_rechazada);
+
+        // Centro: 6 (inicial) + 10 (acreditado por remito padre) - 4 (descontado por remito hijo que va al origen) = 12
+        $this->assertSame(12, $this->stock($this->centro, $this->zapatillas));
+
+        // Central: 20 (inicial) - 10 (descuento de salida del padre)
+        // El remito hijo va a Centro (origen del padre) con config='origen' (default), no a Central
+        $this->assertSame(10, $this->stock($this->central, $this->zapatillas));
+    }
+
+    public function test_confirmar_parcial_con_config_origen_crea_remito_hijo_hacia_el_origen(): void
+    {
+        \App\Models\ConfiguracionRemitos::actual()->update(['destino_rechazados' => 'origen']);
+
+        $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [
+            $this->zapatillas->id => 10,
+        ]);
+
+        $remito = $this->servicio()->confirmar($remito, cantidadesRecibidas: [
+            $this->zapatillas->id => 6,
+        ]);
+
+        // Debe haber un remito hijo
+        $this->assertCount(1, $remito->hijos);
+        $hijo = $remito->hijos->first();
+
+        $this->assertSame(EstadoRemito::Remitido, $hijo->estado);
+        $this->assertSame($this->centro->id, $hijo->sucursal_origen_id);
+        $this->assertSame($this->central->id, $hijo->sucursal_destino_id);
+        $this->assertSame($remito->id, $hijo->remito_origen_id);
+
+        $detalleHijo = $hijo->detalles()->first();
+        $this->assertSame(4, $detalleHijo->cantidad);
+    }
+
+    public function test_confirmar_parcial_con_config_manager_crea_remito_hijo_hacia_la_central(): void
+    {
+        \App\Models\ConfiguracionRemitos::actual()->update(['destino_rechazados' => 'manager']);
+
+        // Asegurar que Centro tiene suficiente stock para el remito
+        $this->stock($this->centro, $this->zapatillas, 15);
+
+        $remito = $this->servicio()->crear($this->centro->id, $this->norte->id, [
+            $this->zapatillas->id => 10,
+        ]);
+
+        $remito = $this->servicio()->confirmar($remito, cantidadesRecibidas: [
+            $this->zapatillas->id => 7,
+        ]);
+
+        // Debe haber un hijo, originado en Norte
+        $remito = Remito::find($remito->id);
+        $hijo = $remito->hijos()->first();
+        $this->assertNotNull($hijo);
+        $this->assertSame($this->norte->id, $hijo->sucursal_origen_id);
+        $this->assertSame(3, $hijo->detalles->first()->cantidad);
+    }
+
+    public function test_confirmar_parcial_con_config_elegir_sin_destino_lanza_excepcion(): void
+    {
+        \App\Models\ConfiguracionRemitos::actual()->update(['destino_rechazados' => 'elegir']);
+
+        $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [
+            $this->zapatillas->id => 10,
+        ]);
+
+        $this->expectException(RemitoException::class);
+        $this->expectExceptionMessage('Elegí a dónde va la mercadería no recibida');
+
+        $this->servicio()->confirmar($remito, cantidadesRecibidas: [
+            $this->zapatillas->id => 6,
+        ]);
+    }
+
+    public function test_confirmar_parcial_con_config_elegir_y_destino_indicado_crea_hijo(): void
+    {
+        \App\Models\ConfiguracionRemitos::actual()->update(['destino_rechazados' => 'elegir']);
+
+        $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [
+            $this->zapatillas->id => 10,
+        ]);
+
+        $remito = $this->servicio()->confirmar($remito, cantidadesRecibidas: [
+            $this->zapatillas->id => 6,
+        ], destinoRechazadosId: $this->norte->id);
+
+        $hijo = $remito->hijos()->first();
+        $this->assertSame($this->norte->id, $hijo->sucursal_destino_id);
+    }
+
+    public function test_confirmar_parcial_con_config_elegir_y_destino_igual_a_quien_rechaza_lanza_excepcion(): void
+    {
+        \App\Models\ConfiguracionRemitos::actual()->update(['destino_rechazados' => 'elegir']);
+
+        $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [
+            $this->zapatillas->id => 10,
+        ]);
+
+        $this->expectException(RemitoException::class);
+        $this->expectExceptionMessage('no puede ser la misma sucursal que lo está rechazando');
+
+        $this->servicio()->confirmar($remito, cantidadesRecibidas: [
+            $this->zapatillas->id => 6,
+        ], destinoRechazadosId: $this->centro->id);
+    }
+
+    public function test_confirmar_sin_cantidades_recibidas_sigue_recibiendo_todo_como_antes(): void
+    {
+        $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [
+            $this->zapatillas->id => 10,
+        ]);
+
+        // Sin pasar cantidadesRecibidas: debe recibir el 100%
+        $remito = $this->servicio()->confirmar($remito);
+
+        $detalle = $remito->detalles()->first();
+        $this->assertSame(10, $detalle->cantidad_recibida);
+        $this->assertSame(0, $detalle->cantidad_rechazada);
+
+        // No debe haber remito hijo
+        $this->assertCount(0, $remito->hijos);
+    }
+
+    public function test_crear_remito_desde_una_caja_persiste_quien_lo_creo(): void
+    {
+        $pdv = \App\Models\PuntoDeVenta::create(['sucursal_id' => $this->central->id, 'nombre' => 'Caja 1', 'secret' => 'test-secret-123']);
+
+        $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [
+            $this->zapatillas->id => 5,
+        ], caja: $pdv);
+
+        $this->assertSame($pdv->id, $remito->creado_por_punto_de_venta_id);
+
+        // El movimiento de salida también debe tener la caja registrada
+        $movimiento = MovimientoStock::where('sucursal_id', $this->central->id)
+            ->where('product_id', $this->zapatillas->id)
+            ->where('cantidad', -5)
+            ->first();
+
+        $this->assertNotNull($movimiento);
+        $this->assertSame($pdv->id, $movimiento->punto_de_venta_id);
+    }
+
+    public function test_caso_borde_quien_recibe_es_la_central_con_config_manager(): void
+    {
+        \App\Models\ConfiguracionRemitos::actual()->update(['destino_rechazados' => 'manager']);
+
+        // Asegurar que Centro tiene suficiente stock
+        $this->stock($this->centro, $this->zapatillas, 10);
+
+        // Remito directo a Central que se recibe parcialmente en la Central
+        $remito = $this->servicio()->crear($this->centro->id, $this->central->id, [
+            $this->zapatillas->id => 10,
+        ]);
+
+        $remito = $this->servicio()->confirmar($remito, cantidadesRecibidas: [
+            $this->zapatillas->id => 6,
+        ]);
+
+        // El hijo debe existir y estar dirigido hacia otro lado que no sea Central (quien rechaza)
+        $remito = Remito::find($remito->id);
+        $hijo = $remito->hijos()->first();
+        $this->assertNotNull($hijo);
+        $this->assertNotSame($this->central->id, $hijo->sucursal_destino_id);
+    }
+
     public function test_la_migracion_crea_los_permisos_de_remitos(): void
     {
-        foreach (['remitos.ver', 'remitos.crear', 'remitos.recibir', 'remitos.cancelar'] as $permiso) {
+        foreach (['remitos.ver', 'remitos.crear', 'remitos.recibir', 'remitos.cancelar', 'remitos.configurar'] as $permiso) {
             $this->assertTrue(\Spatie\Permission\Models\Permission::where('name', $permiso)->exists(), "Falta {$permiso}");
         }
     }

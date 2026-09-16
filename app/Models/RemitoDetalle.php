@@ -11,12 +11,16 @@ class RemitoDetalle extends Model
         'remito_id',
         'product_id',
         'cantidad',
+        'cantidad_recibida',
+        'cantidad_rechazada',
     ];
 
     protected function casts(): array
     {
         return [
             'cantidad' => 'integer',
+            'cantidad_recibida' => 'integer',
+            'cantidad_rechazada' => 'integer',
         ];
     }
 
