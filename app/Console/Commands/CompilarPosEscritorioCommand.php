@@ -13,20 +13,26 @@ class CompilarPosEscritorioCommand extends Command
 
     public function handle(): int
     {
-        $version = $this->option('version');
-
-        if (! $version) {
-            $this->error('Debe indicar la versión: --version=1.6.6');
-
-            return 1;
-        }
-
         $posPath = base_path('../pos');
 
         if (! file_exists($posPath)) {
             $this->error("No se encontró el POS en: $posPath");
 
             return 1;
+        }
+
+        $version = $this->option('version');
+
+        if (! $version) {
+            $version = $this->detectarVersion($posPath);
+
+            if (! $version) {
+                $this->error('No se pudo detectar la versión. Usa: --version=1.6.6');
+
+                return 1;
+            }
+
+            $this->info("Versión detectada: $version");
         }
 
         $script = "$posPath/compilar-escritorio.ps1";
@@ -70,5 +76,22 @@ class CompilarPosEscritorioCommand extends Command
         $this->error('❌ Error en la compilación');
 
         return 1;
+    }
+
+    private function detectarVersion(string $posPath): ?string
+    {
+        $envFile = "$posPath/.env.escritorio";
+
+        if (! file_exists($envFile)) {
+            return null;
+        }
+
+        $content = file_get_contents($envFile);
+
+        if (preg_match('/NATIVEPHP_APP_VERSION=(.+)/', $content, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return null;
     }
 }
