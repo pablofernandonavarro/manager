@@ -107,6 +107,22 @@ class RemitoService
      */
     public function confirmar(Remito $remito, ?User $usuario = null, ?PuntoDeVenta $caja = null, ?array $cantidadesRecibidas = null, ?int $destinoRechazadosId = null): Remito
     {
+        // Validar early: si hay rechazos y config='elegir', destinoRechazadosId es obligatorio.
+        // Esto evita excepciones dentro de transacciones anidadas.
+        if ($cantidadesRecibidas) {
+            $hayRechazos = collect($cantidadesRecibidas)->some(function ($recibidas, $productId) use ($remito) {
+                $item = collect($remito->detalles)->firstWhere('product_id', (int)$productId);
+                return $item && $recibidas < $item['cantidad'];
+            });
+
+            if ($hayRechazos) {
+                $config = \App\Models\ConfiguracionRemitos::actual();
+                if ($config->destino_rechazados === 'elegir' && !$destinoRechazadosId) {
+                    throw new RemitoException("Elegí a dónde va la mercadería no recibida del remito #{$remito->id}.");
+                }
+            }
+        }
+
         return $this->cerrar($remito, EstadoRemito::Confirmado, $usuario, $caja, $cantidadesRecibidas, $destinoRechazadosId);
     }
 
@@ -181,7 +197,13 @@ class RemitoService
 
             // Remito hijo por lo rechazado, dentro de la misma transacción.
             if ($esConfirmacion && $rechazos !== []) {
-                $destinoHijoId = $this->resolverDestinoRechazados($remito, $sucursalId, $destinoRechazadosId);
+                // Validar destino ANTES de crear (fuera de transacción anidada) para evitar
+                // problemas de rollback a savepoints que no existen en SQLite.
+                try {
+                    $destinoHijoId = $this->resolverDestinoRechazados($remito, $sucursalId, $destinoRechazadosId);
+                } catch (RemitoException $e) {
+                    throw $e;
+                }
 
                 $hijo = $this->crear(
                     $sucursalId,
