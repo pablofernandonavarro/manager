@@ -108,11 +108,14 @@ class RemitoService
     public function confirmar(Remito $remito, ?User $usuario = null, ?PuntoDeVenta $caja = null, ?array $cantidadesRecibidas = null, ?int $destinoRechazadosId = null): Remito
     {
         // Validar early: si hay rechazos y config='elegir', destinoRechazadosId es obligatorio.
-        // Esto evita excepciones dentro de transacciones anidadas.
+        // Cargar detalles explícitamente para evitar queries dentro de transacciones anidadas.
         if ($cantidadesRecibidas) {
-            $hayRechazos = collect($cantidadesRecibidas)->some(function ($recibidas, $productId) use ($remito) {
-                $item = collect($remito->detalles)->firstWhere('product_id', (int)$productId);
-                return $item && $recibidas < $item['cantidad'];
+            $remito->load('detalles');
+            $detalles = $remito->detalles->keyBy('product_id');
+
+            $hayRechazos = collect($cantidadesRecibidas)->some(function ($recibidas, $productId) use ($detalles) {
+                $item = $detalles[$productId] ?? null;
+                return $item && $recibidas < $item->cantidad;
             });
 
             if ($hayRechazos) {
