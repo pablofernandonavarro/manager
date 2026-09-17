@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\EstadoRemito;
+use App\Models\ConfiguracionRemitos;
 use App\Models\MovimientoStock;
 use App\Models\Product;
 use App\Models\PuntoDeVenta;
+use App\Models\Remito;
 use App\Models\StockSucursal;
 use App\Models\Sucursal;
 use App\Services\RemitoService;
@@ -53,9 +55,9 @@ class PosRemitosTest extends TestCase
         StockSucursal::create(['sucursal_id' => $this->villaBosh->id, 'product_id' => $this->zapatillas->id, 'cantidad' => 1]);
     }
 
-    private function comoCaja(string $metodo, string $uri): TestResponse
+    private function comoCaja(string $metodo, string $uri, array $data = []): TestResponse
     {
-        return $this->withToken($this->token)->json($metodo, $uri);
+        return $this->withToken($this->token)->json($metodo, $uri, $data);
     }
 
     private function remitoA(Sucursal $destino, array $items)
@@ -143,6 +145,132 @@ class PosRemitosTest extends TestCase
         $ajeno = $this->remitoA($this->centro, [$this->zapatillas->id => 1]);
         $this->comoCaja('POST', "/api/v1/sync/remitos/{$ajeno->id}/confirmar")->assertForbidden();
         $this->assertSame(EstadoRemito::Remitido, $ajeno->fresh()->estado);
+    }
+
+    public function test_crear_remito_desde_caja_usa_su_sucursal_como_origen(): void
+    {
+        StockSucursal::updateOrCreate(
+            ['sucursal_id' => $this->villaBosh->id, 'product_id' => $this->zapatillas->id],
+            ['cantidad' => 10]
+        );
+
+        $r = $this->comoCaja('POST', '/api/v1/pos/remitos', [
+            'destino_sucursal_id' => $this->central->id,
+            'items' => [$this->zapatillas->id => 3],
+            'observaciones' => 'prueba',
+        ])->assertCreated();
+
+        $remito = Remito::find($r->json('data.id'));
+        $this->assertSame($this->villaBosh->id, $remito->sucursal_origen_id);
+        $this->assertSame($this->central->id, $remito->sucursal_destino_id);
+        $this->assertSame($this->cajaVillaBosh->id, $remito->creado_por_punto_de_venta_id);
+        $this->assertSame(7, (int) StockSucursal::where('sucursal_id', $this->villaBosh->id)->where('product_id', $this->zapatillas->id)->value('cantidad'));
+    }
+
+    public function test_crear_remito_desde_caja_respeta_ruta_directa_false(): void
+    {
+        StockSucursal::updateOrCreate(
+            ['sucursal_id' => $this->villaBosh->id, 'product_id' => $this->zapatillas->id],
+            ['cantidad' => 10]
+        );
+        ConfiguracionRemitos::truncate();
+        ConfiguracionRemitos::create(['id' => 1, 'ruta_directa' => false, 'destino_rechazados' => 'origen']);
+
+        $r = $this->comoCaja('POST', '/api/v1/pos/remitos', [
+            'destino_sucursal_id' => $this->centro->id,
+            'items' => [$this->zapatillas->id => 1],
+        ])->assertStatus(422);
+
+        $this->assertStringContainsString('Central', $r->json('message'));
+    }
+
+    public function test_crear_remito_desde_caja_permite_central_cuando_ruta_directa_false(): void
+    {
+        StockSucursal::updateOrCreate(
+            ['sucursal_id' => $this->villaBosh->id, 'product_id' => $this->zapatillas->id],
+            ['cantidad' => 10]
+        );
+        ConfiguracionRemitos::updateOrCreate(['id' => 1], ['ruta_directa' => false, 'destino_rechazados' => 'origen']);
+
+        $r = $this->comoCaja('POST', '/api/v1/pos/remitos', [
+            'destino_sucursal_id' => $this->central->id,
+            'items' => [$this->zapatillas->id => 1],
+        ])->assertCreated();
+
+        $remito = Remito::find($r->json('data.id'));
+        $this->assertSame($this->central->id, $remito->sucursal_destino_id);
+    }
+
+    public function test_crear_remito_desde_caja_rechaza_sin_stock_suficiente(): void
+    {
+        $r = $this->comoCaja('POST', '/api/v1/pos/remitos', [
+            'destino_sucursal_id' => $this->central->id,
+            'items' => [$this->zapatillas->id => 100],
+        ])->assertStatus(422);
+
+        $this->assertStringContainsString('stock suficiente', $r->json('message'));
+    }
+
+    public function test_recibir_parcialmente_acredita_solo_lo_recibido_y_crea_hijo(): void
+    {
+        $remito = $this->remitoA($this->villaBosh, [$this->zapatillas->id => 10, $this->remera->id => 5]);
+        ConfiguracionRemitos::updateOrCreate(['id' => 1], ['ruta_directa' => true, 'destino_rechazados' => 'origen']);
+
+        $r = $this->comoCaja('POST', "/api/v1/pos/remitos/{$remito->id}/recibir", [
+            'cantidades_recibidas' => [$this->zapatillas->id => 6, $this->remera->id => 5],
+        ])->assertOk();
+
+        $this->assertSame('recibido', $r->json('status'));
+        $stock = collect($r->json('stock'))->pluck('cantidad', 'product_id');
+        $this->assertSame(7, (int) $stock[$this->zapatillas->id]);
+        $this->assertSame(5, (int) $stock[$this->remera->id]);
+
+        $remito->refresh();
+        $hijo = $remito->hijos()->first();
+        $this->assertNotNull($hijo);
+        $this->assertSame($this->zapatillas->id, array_keys($hijo->detalles->pluck('cantidad', 'product_id')->toArray())[0]);
+        $this->assertSame(4, (int) collect($hijo->detalles)->firstWhere('product_id', $this->zapatillas->id)->cantidad);
+
+        $this->assertNotNull($r->json('remito_hijo'));
+        $this->assertSame($this->central->id, $hijo->sucursal_destino_id);
+    }
+
+    public function test_recibir_parcialmente_con_config_elegir_sin_destino_falla(): void
+    {
+        $remito = $this->remitoA($this->villaBosh, [$this->zapatillas->id => 10]);
+        ConfiguracionRemitos::truncate();
+        ConfiguracionRemitos::create(['id' => 1, 'ruta_directa' => true, 'destino_rechazados' => 'elegir']);
+
+        $r = $this->comoCaja('POST', "/api/v1/pos/remitos/{$remito->id}/recibir", [
+            'cantidades_recibidas' => [$this->zapatillas->id => 6],
+        ])->assertStatus(422);
+
+        $this->assertStringContainsString('Elegí', $r->json('message'));
+        $remito->refresh();
+        $this->assertSame(EstadoRemito::Remitido, $remito->estado);
+    }
+
+    public function test_configuracion_devuelve_valores_actuales(): void
+    {
+        ConfiguracionRemitos::truncate();
+        ConfiguracionRemitos::create(['id' => 1, 'ruta_directa' => true, 'destino_rechazados' => 'manager']);
+
+        $r = $this->comoCaja('GET', '/api/v1/pos/remitos/configuracion')->assertOk();
+
+        $this->assertTrue($r->json('ruta_directa'));
+        $this->assertSame('manager', $r->json('destino_rechazados'));
+    }
+
+    public function test_sync_sucursales_devuelve_activas(): void
+    {
+        Sucursal::create(['nombre' => 'Inactiva', 'activo' => false]);
+
+        $r = $this->comoCaja('GET', '/api/v1/sync/sucursales')->assertOk();
+
+        $ids = collect($r->json('data'))->pluck('id');
+        $this->assertContains($this->central->id, $ids);
+        $this->assertContains($this->villaBosh->id, $ids);
+        $this->assertNotContains(Sucursal::where('nombre', 'Inactiva')->value('id'), $ids);
     }
 
     public function test_sin_token_no_se_accede(): void
