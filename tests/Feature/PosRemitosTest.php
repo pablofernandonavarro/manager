@@ -80,6 +80,33 @@ class PosRemitosTest extends TestCase
         $this->assertSame('ZAP001', collect($r->json('data.0.items'))->firstWhere('product_id', $this->zapatillas->id)['codigo']);
     }
 
+    public function test_enviados_muestra_lo_que_la_sucursal_de_la_caja_mando_con_su_estado(): void
+    {
+        StockSucursal::updateOrCreate(
+            ['sucursal_id' => $this->villaBosh->id, 'product_id' => $this->zapatillas->id],
+            ['cantidad' => 5]
+        );
+
+        // Villa Bosh manda a Central: se confirma (llegó).
+        $confirmado = app(RemitoService::class)->crear($this->villaBosh->id, $this->central->id, [$this->zapatillas->id => 1]);
+        app(RemitoService::class)->confirmar($confirmado);
+
+        // Villa Bosh manda a Centro: queda en camino.
+        app(RemitoService::class)->crear($this->villaBosh->id, $this->centro->id, [$this->zapatillas->id => 2]);
+
+        // Otra sucursal manda algo: no debe aparecer en el historial de Villa Bosh.
+        $this->remitoA($this->centro, [$this->remera->id => 1]);
+
+        $r = $this->comoCaja('GET', '/api/v1/pos/remitos/enviados')->assertOk();
+
+        $this->assertCount(2, $r->json('data'));
+        $estados = collect($r->json('data'))->pluck('estado', 'destino');
+        $this->assertSame('confirmado', $estados['Central']);
+        $this->assertSame('remitido', $estados['Centro']);
+        $this->assertNotNull(collect($r->json('data'))->firstWhere('destino', 'Central')['confirmado_at']);
+        $this->assertNull(collect($r->json('data'))->firstWhere('destino', 'Centro')['confirmado_at']);
+    }
+
     public function test_recibir_suma_el_stock_devuelve_el_stock_nuevo_y_registra_la_caja(): void
     {
         $remito = $this->remitoA($this->villaBosh, [$this->zapatillas->id => 5, $this->remera->id => 2]);

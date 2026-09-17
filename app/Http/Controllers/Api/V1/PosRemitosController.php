@@ -48,6 +48,42 @@ class PosRemitosController extends Controller
     }
 
     /**
+     * Lo que esta sucursal mandó a otras, con su estado actual (a diferencia de index(),
+     * que es lo que le llega a esta sucursal). Sirve para el historial de la caja: qué se
+     * envió, si ya lo recibieron o sigue en camino.
+     */
+    public function enviados(Request $request): JsonResponse
+    {
+        /** @var \App\Models\PuntoDeVenta $pdv */
+        $pdv = $request->user();
+
+        $remitos = Remito::with(['sucursalDestino', 'detalles.product'])
+            ->where('sucursal_origen_id', $pdv->sucursal_id)
+            ->orderByDesc('remitido_at')
+            ->limit(200)
+            ->get();
+
+        return response()->json([
+            'data' => $remitos->map(fn (Remito $r) => [
+                'id' => $r->id,
+                'numero' => str_pad((string) $r->id, 6, '0', STR_PAD_LEFT),
+                'destino_sucursal_id' => $r->sucursal_destino_id,
+                'destino' => $r->sucursalDestino->nombre,
+                'estado' => $r->estado->value,
+                'remitido_at' => $r->remitido_at->toIso8601String(),
+                'confirmado_at' => $r->confirmado_at?->toIso8601String(),
+                'observaciones' => $r->observaciones,
+                'items' => $r->detalles->map(fn ($d) => [
+                    'product_id' => $d->product_id,
+                    'codigo' => $d->product?->codigo_interno ?: $d->product?->codigo_barras,
+                    'nombre' => $d->product?->nombre,
+                    'cantidad' => $d->cantidad,
+                ])->values(),
+            ])->values(),
+        ]);
+    }
+
+    /**
      * Idempotente: si la caja reintenta (se cortó la red después de confirmar) y el remito
      * ya está recibido, responde OK con el stock actual en vez de un error. Así la caja
      * puede reintentar sin miedo y nunca se acredita dos veces.

@@ -58,6 +58,7 @@ Route::prefix('v1')->group(function (): void {
 
         // Remitos: envío y recepción desde cajas.
         Route::get('pos/remitos', [PosRemitosController::class, 'index']);
+        Route::get('pos/remitos/enviados', [PosRemitosController::class, 'enviados']);
         Route::post('pos/remitos', [PosRemitosController::class, 'store']);
         Route::get('pos/remitos/configuracion', [PosRemitosController::class, 'configuracion']);
         Route::post('pos/remitos/{remito}/recibir', [PosRemitosController::class, 'recibir'])->whereNumber('remito');
