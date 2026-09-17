@@ -3,12 +3,14 @@
 namespace App\Livewire\PuntosDeVenta;
 
 use App\Enums\ComandoPos as ComandoPosEnum;
+use App\Jobs\PublicarUltimaVersionPosJob;
 use App\Models\CodigoInstalacion;
 use App\Models\ComandoPos;
 use App\Models\PuntoDeVenta;
 use App\Models\Sucursal;
 use App\Models\VersionPos;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -113,6 +115,36 @@ class Index extends Component
         session()->flash('success', "Orden \"{$enum->label()}\" enviada a {$pdv->nombre}. La caja la ejecuta en menos de un minuto.");
     }
 
+    /**
+     * Clona el código del POS desde GitHub, lo compila y arma el paquete que las cajas
+     * bajan con "Actualizar el POS" — sin tocar la consola ni SSH.
+     *
+     * Corre en cola (clonar + composer + npm build tarda uno o dos minutos) y el estado
+     * se sigue por polling desde la vista, leyendo la misma cache que actualiza el Job.
+     */
+    public function publicarUltimaVersionPos(): void
+    {
+        $this->authorize('terminales.instalar');
+
+        $estado = Cache::get(PublicarUltimaVersionPosJob::CACHE_KEY);
+
+        if ($estado && $estado['estado'] === 'procesando') {
+            return;
+        }
+
+        Cache::put(PublicarUltimaVersionPosJob::CACHE_KEY, ['estado' => 'procesando', 'mensaje' => null], now()->addMinutes(10));
+
+        PublicarUltimaVersionPosJob::dispatch();
+    }
+
+    /**
+     * @return array{estado: string, mensaje: ?string}|null
+     */
+    public function estadoPublicacionPos(): ?array
+    {
+        return Cache::get(PublicarUltimaVersionPosJob::CACHE_KEY);
+    }
+
     public function toggleActive(int $id): void
     {
         $this->authorize('terminales.instalar');
@@ -203,6 +235,7 @@ class Index extends Component
             'comandosDisponibles' => ComandoPosEnum::cases(),
             'kit' => $this->infoDelKit(),
             'escritorio' => $escritorio,
+            'publicacionPos' => $this->estadoPublicacionPos(),
             // Contra qué se compara la versión que informa cada caja, según cómo esté instalada.
             'ultimaVersion' => $ultimaVersion,
             // Lo que la caja tiene que poder abrir. manager.test solo existe en esta PC:

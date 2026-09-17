@@ -7,7 +7,7 @@ use Symfony\Component\Process\Process;
 
 class CompilarPosEscritorioCommand extends Command
 {
-    protected $signature = 'pos:compilar-escritorio {--pos-version= : Versión a compilar (ej: 1.6.6)}';
+    protected $signature = 'pos:compilar-escritorio {--pos-version= : Versión a compilar (ej: 1.6.6)} {--con-tests : Correr los tests antes de compilar (por defecto se omiten)}';
 
     protected $description = 'Compila la app de escritorio NativePHP del POS';
 
@@ -24,15 +24,16 @@ class CompilarPosEscritorioCommand extends Command
         $version = $this->option('pos-version');
 
         if (! $version) {
-            $version = $this->detectarVersion($posPath);
+            $actual = $this->versionActual($posPath);
 
-            if (! $version) {
-                $this->error('No se pudo detectar la versión. Usa: --pos-version=1.6.6');
+            if (! $actual) {
+                $this->error('No se pudo detectar la versión actual. Usa: --pos-version=1.6.6');
 
                 return 1;
             }
 
-            $this->info("Versión detectada: $version");
+            $version = $this->incrementarPatch($actual);
+            $this->info("Última versión compilada: $actual → compilando $version");
         }
 
         $script = "$posPath/compilar-escritorio.ps1";
@@ -59,6 +60,10 @@ class CompilarPosEscritorioCommand extends Command
             base_path(),
         ];
 
+        if (! $this->option('con-tests')) {
+            $cmd[] = '-SinTests';
+        }
+
         $process = new Process($cmd);
         $process->setWorkingDirectory($posPath);
         $process->setTimeout(600);
@@ -78,7 +83,7 @@ class CompilarPosEscritorioCommand extends Command
         return 1;
     }
 
-    private function detectarVersion(string $posPath): ?string
+    private function versionActual(string $posPath): ?string
     {
         $envFile = "$posPath/.env.escritorio";
 
@@ -93,5 +98,13 @@ class CompilarPosEscritorioCommand extends Command
         }
 
         return null;
+    }
+
+    private function incrementarPatch(string $version): string
+    {
+        $partes = explode('.', $version);
+        $partes[2] = (int) ($partes[2] ?? 0) + 1;
+
+        return implode('.', $partes);
     }
 }

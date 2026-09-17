@@ -200,6 +200,43 @@
                     </p>
                 </div>
             </div>
+
+            <!-- Publicar actualización para las cajas ya instaladas -->
+            @if($puedeInstalar)
+                <div class="mt-5 pt-4 border-t border-gray-100"
+                     @if($publicacionPos && $publicacionPos['estado'] === 'procesando') wire:poll.3s @endif>
+                    <p class="text-sm font-semibold text-gray-900 mb-1.5">Publicar la última versión para las cajas</p>
+                    <p class="text-sm text-gray-700 mb-3">
+                        Trae el código más reciente del POS desde GitHub, lo compila y arma el paquete que las
+                        cajas bajan solas al recibir la orden <strong>Actualizar</strong>. No hace falta SSH ni consola.
+                    </p>
+
+                    @if($publicacionPos && $publicacionPos['estado'] === 'procesando')
+                        <button type="button" disabled
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            Publicando... (1-2 minutos)
+                        </button>
+                    @else
+                        <button type="button" wire:click="publicarUltimaVersionPos" wire:loading.attr="disabled"
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Publicar última versión
+                        </button>
+                    @endif
+
+                    @if($publicacionPos && $publicacionPos['estado'] === 'completado')
+                        <p class="mt-2 text-xs text-green-700 bg-green-50 rounded px-3 py-2">✓ {{ $publicacionPos['mensaje'] }}</p>
+                    @elseif($publicacionPos && $publicacionPos['estado'] === 'error')
+                        <p class="mt-2 text-xs text-red-700 bg-red-50 rounded px-3 py-2 whitespace-pre-line">{{ $publicacionPos['mensaje'] }}</p>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 

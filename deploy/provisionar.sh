@@ -51,6 +51,12 @@ if ! command -v composer >/dev/null; then
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 fi
 
+log "Node.js (para compilar assets al publicar una nueva versión del POS desde el admin)"
+if ! command -v node >/dev/null || [ "$(node -v | cut -d. -f1 | tr -d v)" -lt 22 ]; then
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    apt-get install -y -q nodejs
+fi
+
 log "Actualizaciones de seguridad automáticas"
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
