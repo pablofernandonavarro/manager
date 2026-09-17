@@ -4,6 +4,7 @@ namespace App\Livewire\Sucursales;
 
 use App\Enums\EstadoRemito;
 use App\Exceptions\RemitoException;
+use App\Models\ConfiguracionRemitos;
 use App\Models\Remito;
 use App\Models\Sucursal;
 use App\Services\RemitoService;
@@ -28,6 +29,13 @@ class Remitos extends Component
     #[Url(as: 'estado')]
     public string $filtroEstado = 'remitido';
 
+    public ?int $remitoRecibiendo = null;
+
+    /** @var array<int, int> */
+    public array $cantidadesRecibidas = [];
+
+    public ?int $destinoRechazadosElegido = null;
+
     public function mount(): void
     {
         $this->authorize('remitos.ver');
@@ -47,6 +55,58 @@ class Remitos extends Component
         if (in_array($propiedad, ['sucursalSeleccionada', 'direccion', 'filtroEstado'], true)) {
             $this->resetPage();
         }
+    }
+
+    public function abrirModalRecepcion(int $remitoId): void
+    {
+        $this->authorize('remitos.recibir');
+
+        $remito = Remito::with('detalles')->findOrFail($remitoId);
+        $this->remitoRecibiendo = $remitoId;
+        $this->cantidadesRecibidas = $remito->detalles->mapWithKeys(
+            fn ($d) => [$d->product_id => $d->cantidad]
+        )->toArray();
+        $this->destinoRechazadosElegido = null;
+    }
+
+    public function cerrarModal(): void
+    {
+        $this->remitoRecibiendo = null;
+        $this->cantidadesRecibidas = [];
+        $this->destinoRechazadosElegido = null;
+    }
+
+    public function confirmarRecepcionParcial(RemitoService $remitos): void
+    {
+        $this->authorize('remitos.recibir');
+
+        if (! $this->remitoRecibiendo) {
+            return;
+        }
+
+        $this->ejecutar(
+            function () use ($remitos) {
+                $remito = Remito::findOrFail($this->remitoRecibiendo);
+
+                return $remitos->confirmar(
+                    $remito,
+                    auth()->user(),
+                    null,
+                    $this->cantidadesRecibidas,
+                    $this->destinoRechazadosElegido,
+                );
+            },
+            function (Remito $r) {
+                $msg = "Remito #{$r->id} recibido. El stock se acreditó en {$r->sucursalDestino->nombre}.";
+                if ($hijo = $r->hijos()->latest('id')->first()) {
+                    $msg .= " Remito hijo #{$hijo->id} hacia {$hijo->sucursalDestino->nombre} por mercadería rechazada.";
+                }
+
+                return $msg;
+            }
+        );
+
+        $this->cerrarModal();
     }
 
     public function confirmarRecepcion(int $remitoId, RemitoService $remitos): void
@@ -84,7 +144,7 @@ class Remitos extends Component
 
         $columna = $this->direccion === 'enviados' ? 'sucursal_origen_id' : 'sucursal_destino_id';
 
-        $remitos = Remito::with(['sucursalOrigen', 'sucursalDestino', 'detalles.product', 'user', 'confirmadoPorCaja', 'confirmadoPorUsuario'])
+        $remitos = Remito::with(['sucursalOrigen', 'sucursalDestino', 'detalles.product', 'user', 'confirmadoPorCaja', 'confirmadoPorUsuario', 'creadoPorCaja'])
             ->where($columna, $this->sucursalSeleccionada)
             ->when($this->filtroEstado, fn ($q) => $q->where('estado', $this->filtroEstado))
             ->orderByDesc('remitido_at')
@@ -94,10 +154,18 @@ class Remitos extends Component
             ->where('estado', EstadoRemito::Remitido)
             ->count();
 
+        $remitoModalActual = $this->remitoRecibiendo
+            ? Remito::with(['detalles.product', 'sucursalOrigen', 'sucursalDestino'])->find($this->remitoRecibiendo)
+            : null;
+
+        $config = ConfiguracionRemitos::actual();
+
         return view('livewire.sucursales.remitos', [
             'sucursales' => $sucursales,
             'remitos' => $remitos,
             'pendientes' => $pendientesDeRecibir,
+            'remitoModal' => $remitoModalActual,
+            'config' => $config,
         ]);
     }
 }

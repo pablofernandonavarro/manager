@@ -105,12 +105,15 @@
                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $estadoColor }}">
                             {{ $remito->estado->value === 'remitido' ? 'En tránsito' : $remito->estado->label() }}
                         </span>
+                        @if($remito->creadoPorCaja)
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                                Creado desde caja: {{ $remito->creadoPorCaja->nombre }}
+                            </span>
+                        @endif
                         @if($remito->estado->value === 'remitido')
                             @if($puedeRecibir)
-                                <button type="button" wire:click="confirmarRecepcion({{ $remito->id }})"
-                                        wire:loading.attr="disabled"
-                                        wire:confirm="¿Confirmás que {{ $remito->sucursalDestino->nombre }} recibió esta mercadería? El stock se acredita ahí."
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50">
+                                <button type="button" wire:click="abrirModalRecepcion({{ $remito->id }})"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                     Confirmar recepción
                                 </button>
@@ -192,6 +195,106 @@
     @if($remitos->hasPages())
         <div class="bg-white rounded-xl px-6 py-4 border border-gray-200">
             {{ $remitos->links() }}
+        </div>
+    @endif
+
+    <!-- Modal de recepción parcial -->
+    @if($remitoModal)
+        <div class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <!-- Header -->
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Recepción de remito #{{ str_pad($remitoModal->id, 6, '0', STR_PAD_LEFT) }}</h2>
+                        <p class="text-sm text-gray-600 mt-1">{{ $remitoModal->sucursalOrigen->nombre }} → {{ $remitoModal->sucursalDestino->nombre }}</p>
+                    </div>
+                    <button type="button" wire:click="cerrarModal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Contenido -->
+                <div class="px-6 py-4 space-y-4">
+                    <!-- Tabla de artículos -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-900 mb-3">Cantidades recibidas</label>
+                        <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Producto</th>
+                                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-600 uppercase">Enviado</th>
+                                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-600 uppercase">Recibido</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach($remitoModal->detalles as $detalle)
+                                    <tr>
+                                        <td class="px-4 py-3">
+                                            <div class="font-medium text-gray-900">{{ $detalle->product->nombre }}</div>
+                                            <div class="text-xs text-gray-500">{{ $detalle->product->codigo_interno ?? $detalle->product->codigo_barras ?? '-' }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <span class="inline-block px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-semibold">
+                                                {{ number_format($detalle->cantidad) }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <input type="number"
+                                                   wire:model.lazy="cantidadesRecibidas.{{ $detalle->product_id }}"
+                                                   min="0"
+                                                   max="{{ $detalle->cantidad }}"
+                                                   class="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:ring-2 focus:ring-blue-500">
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Selector de destino si config es 'elegir' -->
+                    @php
+                        $hayRechazos = collect($cantidadesRecibidas)
+                            ->some(function($qty, $productId) use ($remitoModal) {
+                                $detalle = $remitoModal->detalles->firstWhere('product_id', $productId);
+                                return $detalle && $qty < $detalle->cantidad;
+                            });
+                    @endphp
+
+                    @if($hayRechazos && $config->destino_rechazados === 'elegir')
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-2">Destino de mercadería rechazada</label>
+                            <p class="text-xs text-gray-600 mb-3">Hay artículos rechazados. Indicá a dónde van:</p>
+                            <select wire:model="destinoRechazadosElegido"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Seleccionar destino --</option>
+                                @foreach($sucursales as $s)
+                                    @if($s->id !== $remitoModal->sucursal_destino_id)
+                                        <option value="{{ $s->id }}">{{ $s->nombre }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Acciones -->
+                <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center gap-3 justify-end">
+                    <button type="button" wire:click="cerrarModal"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button type="button" wire:click="confirmarRecepcionParcial"
+                            wire:loading.attr="disabled"
+                            class="px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50">
+                        <svg class="w-4 h-4 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Confirmar recepción
+                    </button>
+                </div>
+            </div>
         </div>
     @endif
 </div>
