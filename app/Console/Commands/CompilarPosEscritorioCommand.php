@@ -7,7 +7,7 @@ use Symfony\Component\Process\Process;
 
 class CompilarPosEscritorioCommand extends Command
 {
-    protected $signature = 'pos:compilar-escritorio {--version= : Versión a compilar (ej: 1.6.6)}';
+    protected $signature = 'pos:compilar-escritorio {--pos-version= : Versión a compilar (ej: 1.6.6)}';
 
     protected $description = 'Compila la app de escritorio NativePHP del POS';
 
@@ -21,13 +21,13 @@ class CompilarPosEscritorioCommand extends Command
             return 1;
         }
 
-        $version = $this->option('version');
+        $version = $this->option('pos-version');
 
         if (! $version) {
             $version = $this->detectarVersion($posPath);
 
             if (! $version) {
-                $this->error('No se pudo detectar la versión. Usa: --version=1.6.6');
+                $this->error('No se pudo detectar la versión. Usa: --pos-version=1.6.6');
 
                 return 1;
             }
