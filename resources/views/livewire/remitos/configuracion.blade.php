@@ -51,9 +51,9 @@
                             </div>
                         </div>
 
-                        <button type="button" wire:click="$toggle('rutaDirecta')" class="flex-shrink-0 relative inline-flex h-12 w-20 items-center rounded-full transition-all duration-300 {{ $rutaDirecta ? 'bg-gradient-to-r from-green-400 to-green-600' : 'bg-gradient-to-r from-gray-300 to-gray-400' }} shadow-md hover:shadow-lg">
+                        <div class="flex-shrink-0 relative inline-flex h-12 w-20 items-center rounded-full transition-all duration-300 {{ $rutaDirecta ? 'bg-gradient-to-r from-green-400 to-green-600' : 'bg-gradient-to-r from-gray-300 to-gray-400' }} shadow-md hover:shadow-lg cursor-pointer" wire:click="$toggle('rutaDirecta')">
                             <span class="inline-block h-10 w-10 transform rounded-full bg-white shadow-lg transition-transform duration-300 {{ $rutaDirecta ? 'translate-x-9' : 'translate-x-1' }}"></span>
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
