@@ -19,6 +19,7 @@ enum ComandoPos: string
     case LimpiarCache = 'limpiar_cache';
     case RecrearAccesoDirecto = 'recrear_acceso_directo';
     case Actualizar = 'actualizar';
+    case LimpiarFallidos = 'limpiar_fallidos';
 
     public function label(): string
     {
@@ -30,6 +31,7 @@ enum ComandoPos: string
             self::LimpiarCache => 'Limpiar caché',
             self::RecrearAccesoDirecto => 'Recrear acceso directo',
             self::Actualizar => 'Actualizar el POS',
+            self::LimpiarFallidos => 'Limpiar envíos fallidos',
         };
     }
 
@@ -43,6 +45,7 @@ enum ComandoPos: string
             self::LimpiarCache => 'Limpia cachés de configuración y vistas.',
             self::RecrearAccesoDirecto => 'Vuelve a crear el ícono del escritorio si alguien lo borró. Solo Windows.',
             self::Actualizar => 'Baja la última versión del código y la aplica. Si algo falla, vuelve sola a la anterior.',
+            self::LimpiarFallidos => 'Borra los intentos de sincronización que ya agotaron sus reintentos. No reintenta nada: lo que sigue pendiente de verdad se reenvía solo.',
         };
     }
 }
