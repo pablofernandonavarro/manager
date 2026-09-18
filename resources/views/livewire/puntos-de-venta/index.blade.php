@@ -35,11 +35,20 @@
             </svg>
         </button>
 
-        <div x-show="abierto" x-cloak class="px-6 pb-6 border-t border-gray-100 pt-5">
+        <div x-show="abierto" x-cloak x-data="{ so: 'windows' }" class="px-6 pb-6 border-t border-gray-100 pt-5">
             <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-5 text-sm text-amber-900">
                 El Manager <strong>no instala el POS a distancia</strong>. Alguien tiene que abrir la app
                 <strong>una vez</strong> en la máquina de la caja y pegar un código. No hace falta instalar
                 PHP ni nada más: la app trae todo adentro.
+            </div>
+
+            <div class="mb-5 inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 text-sm">
+                <button type="button" @click="so = 'windows'"
+                        :class="so === 'windows' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+                        class="px-4 py-1.5 rounded-md font-medium transition-colors">Windows</button>
+                <button type="button" @click="so = 'mac'"
+                        :class="so === 'mac' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+                        class="px-4 py-1.5 rounded-md font-medium transition-colors">Mac</button>
             </div>
 
             <div class="grid md:grid-cols-3 gap-6">
@@ -55,7 +64,7 @@
                     </ul>
                 </div>
 
-                <div>
+                <div x-show="so === 'windows'">
                     <p class="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
                         <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
                         Descargar la app
@@ -95,16 +104,65 @@
                     @endif
                 </div>
 
+                <div x-show="so === 'mac'" x-cloak>
+                    <p class="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
+                        Descargar la app
+                    </p>
+                    <ul class="text-sm text-gray-700 space-y-1.5 ml-7 list-disc">
+                        <li>En la Mac de la caja, entrá a esta pantalla y descargá el POS para Mac (chip Apple: M1 en adelante).</li>
+                        <li>Safari descomprime el zip solo. Si no, doble clic en el zip.</li>
+                        <li>Arrastrá <strong>POS System</strong> a la carpeta <strong>Aplicaciones</strong>. No la dejes en Descargas.</li>
+                    </ul>
+
+                    @if($puedeInstalar)
+                        <div class="mt-3 ml-7">
+                            @if($escritorioMac)
+                                <a href="{{ route('pdv.instalador-escritorio', ['plataforma' => 'mac']) }}"
+                                   class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                    Descargar POS para Mac
+                                </a>
+                                <p class="mt-1.5 text-xs text-gray-500">
+                                    Versión {{ $escritorioMac['version'] }} ·
+                                    {{ number_format($escritorioMac['tamano'] / 1024 / 1024, 0) }} MB ·
+                                    publicado el {{ \Carbon\Carbon::parse($escritorioMac['generado_at'])->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}
+                                </p>
+                            @else
+                                <p class="text-xs text-amber-700 bg-amber-50 rounded px-3 py-2">
+                                    Todavía no se publicó la app para Mac. Se publica sola con el próximo tag
+                                    <code class="font-mono">escritorio-v*</code> del POS.
+                                </p>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+
                 <div>
                     <p class="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
                         <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">3</span>
                         Abrir e instalar
                     </p>
-                    <ul class="text-sm text-gray-700 space-y-1.5 ml-7 list-disc">
+                    <ul x-show="so === 'windows'" class="text-sm text-gray-700 space-y-1.5 ml-7 list-disc">
                         <li>Doble clic en <code class="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">pos-system.exe</code>.</li>
                         <li>
                             Si Windows muestra <em>"Windows protegió su PC"</em>: <strong>Más información</strong> →
                             <strong>Ejecutar de todas formas</strong> (la app todavía no está firmada).
+                        </li>
+                        <li>Aparece <strong>Instalar esta caja</strong>. Poné esta dirección y el código:</li>
+                    </ul>
+                    <ul x-show="so === 'mac'" x-cloak class="text-sm text-gray-700 space-y-1.5 ml-7 list-disc">
+                        <li>Abrí <strong>POS System</strong> desde Aplicaciones.</li>
+                        <li>
+                            La primera vez macOS la bloquea (la app no está firmada por Apple). Andá a
+                            <strong>Ajustes del Sistema → Privacidad y seguridad</strong>, bajá hasta el aviso de
+                            POS System y tocá <strong>Abrir igual</strong>. Se hace una sola vez.
+                        </li>
+                        <li>
+                            Si no aparece el botón, en la Terminal:
+                            <code class="block mt-1 px-2 py-1 bg-gray-100 rounded text-xs font-mono break-all">xattr -dr com.apple.quarantine "/Applications/POS System.app"</code>
                         </li>
                         <li>Aparece <strong>Instalar esta caja</strong>. Poné esta dirección y el código:</li>
                     </ul>
@@ -120,11 +178,17 @@
 
             <div class="mt-5 pt-5 border-t border-gray-100">
                 <p class="text-sm font-semibold text-gray-900 mb-2">Al tocar "Instalar caja" queda todo listo:</p>
-                <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-gray-700">
+                <div x-show="so === 'windows'" class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-gray-700">
                     <p>✓ Catálogo, precios y stock descargados</p>
                     <p>✓ Acceso directo "POS - nombre" en el escritorio</p>
                     <p>✓ Se abre sola al iniciar Windows</p>
                     <p>✓ Datos propios de la caja en <code class="text-xs font-mono">%APPDATA%\pos-system</code></p>
+                </div>
+                <div x-show="so === 'mac'" x-cloak class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-gray-700">
+                    <p>✓ Catálogo, precios y stock descargados</p>
+                    <p>✓ Se abre sola al iniciar sesión (macOS puede pedir permiso la primera vez)</p>
+                    <p>✓ Impresora: agregala en Ajustes del Sistema → Impresoras y elegila en Ajustes del POS</p>
+                    <p>✓ Datos propios de la caja en <code class="text-xs font-mono">~/Library/Application Support/pos-system</code></p>
                 </div>
                 <p class="mt-3 text-xs text-gray-600 bg-gray-50 rounded px-3 py-2">
                     La caja sincroniza <strong>mientras la app está abierta</strong>. Si se cierra, sigue
@@ -144,11 +208,16 @@
                 </div>
                 <div>
                     <p class="text-sm font-semibold text-gray-900 mb-1.5">Pasar a una versión nueva</p>
-                    <p class="text-sm text-gray-700">
+                    <p x-show="so === 'windows'" class="text-sm text-gray-700">
                         Cerrá la app, <strong>borrá</strong> la carpeta <code class="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">C:\POS-Escritorio</code>
                         y extraé el zip nuevo en <code class="text-xs font-mono">C:\</code>. No copies encima: pueden quedar archivos
                         de la versión anterior. Ventas y configuración se conservan (viven en
                         <code class="text-xs font-mono">%APPDATA%</code>). No hace falta código. La columna Versión confirma que se actualizó.
+                    </p>
+                    <p x-show="so === 'mac'" x-cloak class="text-sm text-gray-700">
+                        Cerrá la app (⌘Q), descargá la versión nueva y arrastrala a Aplicaciones
+                        reemplazando la anterior. Ventas y configuración se conservan (viven en
+                        <code class="text-xs font-mono">~/Library/Application Support</code>). No hace falta código. La columna Versión confirma que se actualizó.
                     </p>
                 </div>
                 <div>
@@ -162,7 +231,7 @@
             </div>
 
             <p class="mt-5 text-xs text-gray-500">
-                Requisitos en la máquina de la caja: Windows 10 u 11 de 64 bits y acceso por red a este Manager.
+                Requisitos en la máquina de la caja: Windows 10 u 11 de 64 bits, o una Mac con chip Apple (M1 en adelante), y acceso por red a este Manager.
             </p>
 
             <!-- Instalación clásica, para las cajas que ya la usan -->

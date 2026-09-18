@@ -7,8 +7,8 @@ use App\Models\ComandoPos;
 use App\Models\PuntoDeVenta;
 use App\Models\Sucursal;
 use App\Models\VersionPos;
+use App\Support\AppEscritorio;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -50,11 +50,8 @@ class Sincronizacion extends Component
     /** Última versión publicada, por tipo de instalación — mismo cálculo que PuntosDeVenta\Index. */
     private function ultimaVersionPorTipo(): array
     {
-        $carpeta = Storage::disk('local')->path('pos-escritorio');
-        $meta = json_decode(@file_get_contents("{$carpeta}/pos-escritorio.json") ?: 'null', true);
-
         return [
-            'escritorio' => $meta['version'] ?? null,
+            'escritorio' => AppEscritorio::ultimaVersion(),
             'clasica' => VersionPos::vigente()?->version,
         ];
     }

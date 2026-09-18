@@ -9,10 +9,10 @@ use App\Models\Remito;
 use App\Models\StockSucursal;
 use App\Models\TurnoCaja;
 use App\Models\VersionPos;
+use App\Support\AppEscritorio;
 use App\Support\SaludCaja;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Datos del tablero de inicio. Las ventas salen de ReporteVentasService (mismos criterios de
@@ -116,8 +116,7 @@ class DashboardService
             ->get();
 
         // Contra qué versión se compara cada caja: igual que Puntos de venta.
-        $escritorio = json_decode(@file_get_contents(Storage::disk('local')->path('pos-escritorio/pos-escritorio.json')) ?: 'null', true);
-        $ultima = ['clasica' => VersionPos::vigente()?->version, 'escritorio' => $escritorio['version'] ?? null];
+        $ultima = ['clasica' => VersionPos::vigente()?->version, 'escritorio' => AppEscritorio::ultimaVersion()];
         $conteo = [SaludCaja::OK => 0, SaludCaja::ALERTA => 0, SaludCaja::CRITICO => 0, SaludCaja::SIN_DATOS => 0, SaludCaja::INACTIVA => 0];
         $problemas = [];
 

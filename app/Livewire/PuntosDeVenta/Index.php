@@ -9,6 +9,7 @@ use App\Models\ComandoPos;
 use App\Models\PuntoDeVenta;
 use App\Models\Sucursal;
 use App\Models\VersionPos;
+use App\Support\AppEscritorio;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -186,27 +187,10 @@ class Index extends Component
         return json_decode(file_get_contents($meta), true);
     }
 
-    /**
-     * Datos de la app de escritorio publicada, o null si todavía no se publicó.
-     *
-     * @return array{version: string, formato: string, tamano: int, sha256: string, generado_at: string}|null
-     */
-    private function infoDelEscritorio(): ?array
-    {
-        $carpeta = Storage::disk('local')->path('pos-escritorio');
-        $meta = json_decode(@file_get_contents("{$carpeta}/pos-escritorio.json") ?: 'null', true);
-
-        if (! $meta || ! file_exists("{$carpeta}/pos-escritorio.{$meta['formato']}")) {
-            return null;
-        }
-
-        return $meta;
-    }
-
     #[Layout('layouts.app')]
     public function render(): mixed
     {
-        $escritorio = $this->infoDelEscritorio();
+        $escritorio = AppEscritorio::publicada('windows');
         $ultimaVersion = [
             'escritorio' => $escritorio['version'] ?? null,
             'clasica' => VersionPos::vigente()?->version,
@@ -235,6 +219,7 @@ class Index extends Component
             'comandosDisponibles' => ComandoPosEnum::cases(),
             'kit' => $this->infoDelKit(),
             'escritorio' => $escritorio,
+            'escritorioMac' => AppEscritorio::publicada('mac'),
             'publicacionPos' => $this->estadoPublicacionPos(),
             // Contra qué se compara la versión que informa cada caja, según cómo esté instalada.
             'ultimaVersion' => $ultimaVersion,

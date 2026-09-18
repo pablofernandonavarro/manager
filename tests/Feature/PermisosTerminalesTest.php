@@ -154,6 +154,67 @@ class PermisosTerminalesTest extends TestCase
         $this->get(route('pdv.instalador-escritorio'))->assertNotFound();
     }
 
+    private function publicar(string $base, string $version): void
+    {
+        Storage::disk('local')->put("pos-escritorio/{$base}.zip", "zip {$base}");
+        Storage::disk('local')->put("pos-escritorio/{$base}.json", json_encode([
+            'version' => $version, 'formato' => 'zip', 'tamano' => 2 * 1024 * 1024, 'sha256' => 'x', 'generado_at' => now()->toIso8601String(),
+        ]));
+    }
+
+    public function test_se_descarga_la_app_de_windows_o_la_de_mac(): void
+    {
+        Storage::fake('local');
+        $this->publicar('pos-escritorio', '1.9.7');
+        $this->publicar('pos-escritorio-mac', '1.9.7');
+
+        $this->actingAs($this->usuarioCon(['terminales.ver', 'terminales.instalar']));
+
+        $windows = $this->get(route('pdv.instalador-escritorio'))->assertOk();
+        $this->assertStringContainsString('POS-Escritorio-1.9.7.zip', $windows->headers->get('content-disposition'));
+        $this->assertSame('zip pos-escritorio', file_get_contents($windows->baseResponse->getFile()->getPathname()));
+
+        $mac = $this->get(route('pdv.instalador-escritorio', ['plataforma' => 'mac']))->assertOk();
+        $this->assertStringContainsString('POS-Escritorio-1.9.7-mac.zip', $mac->headers->get('content-disposition'));
+        $this->assertSame('zip pos-escritorio-mac', file_get_contents($mac->baseResponse->getFile()->getPathname()));
+
+        $this->get(route('pdv.instalador-escritorio', ['plataforma' => 'linux']))->assertNotFound();
+        $this->get(route('pdv.instalador-escritorio', ['plataforma' => ['mac']]))->assertNotFound();
+    }
+
+    public function test_la_app_de_mac_no_se_descarga_sin_permiso_ni_sin_publicar(): void
+    {
+        Storage::fake('local');
+        $this->publicar('pos-escritorio', '1.9.7');
+
+        $this->actingAs($this->usuarioCon(['terminales.ver']));
+        $this->get(route('pdv.instalador-escritorio', ['plataforma' => 'mac']))->assertForbidden();
+
+        $this->actingAs($this->usuarioCon(['terminales.ver', 'terminales.instalar']));
+        $this->get(route('pdv.instalador-escritorio', ['plataforma' => 'mac']))->assertNotFound();
+    }
+
+    public function test_la_pantalla_ofrece_la_descarga_para_mac_solo_si_esta_publicada(): void
+    {
+        Storage::fake('local');
+        $this->publicar('pos-escritorio', '1.9.7');
+
+        $this->actingAs($this->usuarioCon(['terminales.ver', 'terminales.instalar']));
+
+        $this->get(route('pdv.index'))
+            ->assertOk()
+            ->assertDontSee('Descargar POS para Mac')
+            ->assertSee('Todavía no se publicó la app para Mac');
+
+        $this->publicar('pos-escritorio-mac', '1.9.7');
+
+        $this->get(route('pdv.index'))
+            ->assertOk()
+            ->assertSee('Descargar POS para Mac')
+            ->assertSee('Abrir igual')
+            ->assertSee(route('pdv.instalador-escritorio', ['plataforma' => 'mac']), escape: false);
+    }
+
     public function test_la_pantalla_explica_la_instalacion_con_la_app_de_escritorio(): void
     {
         // Sin app publicada, para no depender de lo que haya en el disco de esta máquina.

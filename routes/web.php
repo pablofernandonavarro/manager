@@ -52,6 +52,7 @@ use App\Livewire\Users\Index;
 use App\Livewire\Ventas\PorArticulo as VentasPorArticulo;
 use App\Models\Remito;
 use App\Services\ImportacionProductos;
+use App\Support\AppEscritorio;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -193,15 +194,16 @@ Route::middleware('auth')->group(function () {
         return response()->download($zip, 'instalador-pos.zip');
     })->middleware('can:terminales.instalar')->name('pdv.instalador');
 
-    // App de escritorio (NativePHP). Mismo permiso: con el ejecutable y un código se da
-    // de alta una caja.
-    Route::get('/puntos-de-venta/instalador-escritorio', function () {
-        $carpeta = Storage::disk('local')->path('pos-escritorio');
-        $meta = json_decode(@file_get_contents("{$carpeta}/pos-escritorio.json") ?: 'null', true);
-        $archivo = $meta ? "{$carpeta}/pos-escritorio.{$meta['formato']}" : null;
+    // App de escritorio (NativePHP), Windows o Mac (?plataforma=mac). Mismo permiso: con el
+    // ejecutable y un código se da de alta una caja.
+    Route::get('/puntos-de-venta/instalador-escritorio', function (\Illuminate\Http\Request $request) {
+        $plataforma = $request->query('plataforma', 'windows');
+        $app = is_string($plataforma) ? AppEscritorio::publicada($plataforma) : null;
 
-        abort_unless($archivo && file_exists($archivo), 404, 'Todavía no se publicó la app de escritorio. Ejecutá: php artisan pos:publicar-escritorio <carpeta win-unpacked>');
+        abort_unless($app, 404, 'Todavía no se publicó la app de escritorio para esa plataforma.');
 
-        return response()->download($archivo, "POS-Escritorio-{$meta['version']}.{$meta['formato']}");
+        $sufijo = $plataforma === 'mac' ? '-mac' : '';
+
+        return response()->download($app['archivo'], "POS-Escritorio-{$app['version']}{$sufijo}.{$app['formato']}");
     })->middleware('can:terminales.instalar')->name('pdv.instalador-escritorio');
 });
