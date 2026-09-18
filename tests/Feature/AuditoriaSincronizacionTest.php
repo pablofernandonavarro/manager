@@ -149,6 +149,29 @@ class AuditoriaSincronizacionTest extends TestCase
         $this->assertSame('limpiar_fallidos', $comando->comando->value);
     }
 
+    /**
+     * La caja recién consulta al Manager una vez por minuto (pos:comandos): sin polling
+     * más rápido, ver el resultado de una orden en camino exigía recargar la página a mano.
+     */
+    public function test_la_pantalla_refresca_mas_rapido_mientras_hay_una_orden_en_camino(): void
+    {
+        $this->reportar();
+        $this->actingAs($this->usuarioCon(['terminales.ver', 'terminales.comandos']));
+
+        Livewire::test(Sincronizacion::class)
+            ->assertDontSeeHtml('wire:poll.3s')
+            ->assertSeeHtml('wire:poll.30s')
+            ->call('limpiarFallidos', $this->caja->id)
+            ->assertSeeHtml('wire:poll.3s')
+            ->assertDontSeeHtml('wire:poll.30s');
+
+        $this->caja->ultimoComando->update(['estado' => 'completado', 'finalizado_at' => now()]);
+
+        Livewire::test(Sincronizacion::class)
+            ->assertSeeHtml('wire:poll.30s')
+            ->assertDontSeeHtml('wire:poll.3s');
+    }
+
     public function test_una_caja_sin_instalar_no_aparece(): void
     {
         $sucursal = Sucursal::create(['nombre' => 'Sin instalar']);

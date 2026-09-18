@@ -2,7 +2,7 @@
     $puedeMandarOrdenes = auth()->user()->can('terminales.comandos');
 @endphp
 
-<div class="space-y-6">
+<div class="space-y-6" @if($hayComandoEnCurso) wire:poll.3s @else wire:poll.30s @endif>
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>

@@ -88,8 +88,16 @@ class Sincronizacion extends Component
 
         $todaLaSalud = $puntosDeVenta->map(fn ($pdv) => $pdv->salud($ultimaVersion[$pdv->tipo_instalacion] ?? null));
 
+        // Cada caja informa su estado y consulta órdenes una vez por minuto (pos:comandos):
+        // con una orden en camino conviene refrescar más seguido para ver el resultado apenas
+        // llega, en vez de esperar a que alguien reabra la pantalla.
+        $hayComandoEnCurso = $puntosDeVenta->contains(
+            fn ($pdv) => $pdv->ultimoComando && in_array($pdv->ultimoComando->estado, [ComandoPos::PENDIENTE, ComandoPos::TOMADO], true)
+        );
+
         return view('livewire.auditoria.sincronizacion', [
             'filas' => $filas,
+            'hayComandoEnCurso' => $hayComandoEnCurso,
             'cajasCriticas' => $todaLaSalud->where('nivel', 'critico')->count(),
             'cajasEnAlerta' => $todaLaSalud->where('nivel', 'alerta')->count(),
             'cajasOk' => $todaLaSalud->where('nivel', 'ok')->count(),
