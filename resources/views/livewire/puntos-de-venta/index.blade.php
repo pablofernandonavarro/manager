@@ -391,24 +391,22 @@
                         <td class="px-6 py-4 align-top">
                             @if($s = $salud[$pdv->id] ?? null)
                                 @php
-                                    $estilos = [
-                                        'critico' => ['bg-red-100 text-red-800', 'bg-red-500', 'Con problemas'],
-                                        'alerta' => ['bg-amber-100 text-amber-800', 'bg-amber-500', 'Revisar'],
-                                        'ok' => ['bg-green-100 text-green-800', 'bg-green-500', 'Todo bien'],
-                                        'sin_datos' => ['bg-gray-100 text-gray-600', 'bg-gray-400', 'Sin datos'],
-                                        'inactiva' => ['bg-gray-100 text-gray-500', 'bg-gray-300', 'Inactiva'],
-                                    ][$s['nivel']];
+                                    [$badgeClases, $puntoClase, $label] = \App\Support\SaludCaja::estilo($s['nivel']);
                                     $estado = $pdv->estado_caja ?? [];
                                 @endphp
-                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium {{ $estilos[0] }}">
-                                    <span class="w-1.5 h-1.5 rounded-full {{ $estilos[1] }}"></span>
-                                    {{ $estilos[2] }}
-                                </span>
-                                <ul class="mt-1 space-y-0.5 max-w-xs">
-                                    @foreach($s['problemas'] as $problema)
-                                        <li class="text-xs {{ $problema['nivel'] === 'critico' ? 'text-red-700' : ($problema['nivel'] === 'alerta' ? 'text-amber-700' : 'text-gray-500') }}">{{ $problema['texto'] }}</li>
-                                    @endforeach
-                                </ul>
+                                <a href="{{ route('auditoria-sincronizacion.index') }}" wire:navigate
+                                   class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium {{ $badgeClases }} {{ $s['nivel'] !== 'ok' ? 'hover:opacity-80' : '' }}">
+                                    <span class="w-1.5 h-1.5 rounded-full {{ $puntoClase }}"></span>
+                                    {{ $label }}
+                                </a>
+                                @if(count($s['problemas']) > 0)
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        {{ $s['problemas'][0]['texto'] }}
+                                        @if(count($s['problemas']) > 1)
+                                            , +{{ count($s['problemas']) - 1 }} más
+                                        @endif
+                                    </p>
+                                @endif
                                 @if($s['nivel'] !== 'sin_datos' && $estado)
                                     <p class="mt-1 text-xs text-gray-400">
                                         {{ $estado['ventas_pendientes'] ?? 0 }} sin enviar ·

@@ -35,6 +35,24 @@ final class SaludCaja
     private const JOBS_ACUMULADOS = 20;
 
     /**
+     * Colores y label de cada nivel, para no duplicar este mapping en cada vista que
+     * muestra el badge de salud de una caja.
+     *
+     * @return array{0: string, 1: string, 2: string} [clases del badge, clase del punto, label]
+     */
+    public static function estilo(string $nivel): array
+    {
+        return match ($nivel) {
+            self::CRITICO => ['bg-red-100 text-red-800', 'bg-red-500', 'Con problemas'],
+            self::ALERTA => ['bg-amber-100 text-amber-800', 'bg-amber-500', 'Revisar'],
+            self::OK => ['bg-green-100 text-green-800', 'bg-green-500', 'Todo bien'],
+            self::SIN_DATOS => ['bg-gray-100 text-gray-600', 'bg-gray-400', 'Sin datos'],
+            self::INACTIVA => ['bg-gray-100 text-gray-500', 'bg-gray-300', 'Inactiva'],
+            default => ['bg-gray-100 text-gray-600', 'bg-gray-400', $nivel],
+        };
+    }
+
+    /**
      * @return array{nivel: string, problemas: array<int, array{nivel: string, texto: string}>}
      */
     public static function evaluar(PuntoDeVenta $pdv, ?string $ultimaVersion = null, ?CarbonInterface $ahora = null): array

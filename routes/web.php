@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ExportarVentasController;
 use App\Http\Controllers\Sucursales\AjusteStockController;
+use App\Livewire\Auditoria\Sincronizacion as AuditoriaSincronizacion;
 use App\Livewire\Auth\ForgotPassword;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\ResetPassword;
@@ -162,6 +163,7 @@ Route::middleware('auth')->group(function () {
 
     // Puntos de venta
     Route::get('/puntos-de-venta', PuntosDeVentaIndex::class)->name('pdv.index');
+    Route::get('/auditoria-sincronizacion', AuditoriaSincronizacion::class)->name('auditoria-sincronizacion.index');
 
     // Caja y cobro
     Route::get('/cajas/cierres', CajasCierres::class)->middleware('can:cajas.ver')->name('cajas.cierres');
