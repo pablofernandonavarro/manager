@@ -25,6 +25,8 @@
 
             <!-- Form Body -->
             <div class="px-8 py-6 space-y-6">
+                @include('livewire.users._foto')
+
                 <!-- Nombre Completo -->
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-2">

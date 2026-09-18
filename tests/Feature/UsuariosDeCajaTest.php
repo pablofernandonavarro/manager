@@ -9,7 +9,9 @@ use App\Models\PuntoDeVenta;
 use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -163,9 +165,87 @@ class UsuariosDeCajaTest extends TestCase
 
         $this->assertEqualsCanonicalizing([$beto->id, $ana->id], array_column($r->json('data'), 'id'));
         $datosAna = collect($r->json('data'))->firstWhere('id', $ana->id);
-        $this->assertSame(['id', 'nombre', 'rol', 'pin_hash'], array_keys($datosAna));
+        $this->assertSame(['id', 'nombre', 'rol', 'pin_hash', 'foto_url'], array_keys($datosAna));
         $this->assertSame('supervisor', $datosAna['rol']);
         $this->assertTrue(Hash::check('1111', $datosAna['pin_hash']));
+        $this->assertNull($datosAna['foto_url']);
+
+        $beto->update(['foto' => 'usuarios/fotos/beto.jpg']);
+        $r = $this->withToken($caja->createToken('pos-sync')->plainTextToken)->getJson('/api/v1/sync/cajeros')->assertOk();
+        $this->assertSame(asset('storage/usuarios/fotos/beto.jpg'), collect($r->json('data'))->firstWhere('id', $beto->id)['foto_url']);
+    }
+
+    public function test_la_foto_de_celular_se_guarda_recortada_cuadrada_y_comprimida(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->admin());
+
+        $original = UploadedFile::fake()->image('celular.png', 900, 1200);
+
+        Livewire::test(Create::class)
+            ->set('name', 'Beto Cajero')->set('role', 'cajero')->set('pin', '2468')
+            ->call('elegirSucursal', $this->villaBosh->id)
+            ->set('foto', $original)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $ruta = User::where('name', 'Beto Cajero')->sole()->foto;
+        $this->assertStringStartsWith('usuarios/fotos/', $ruta);
+        $this->assertStringEndsWith('.jpg', $ruta);
+        Storage::disk('public')->assertExists($ruta);
+
+        $guardada = Storage::disk('public')->path($ruta);
+        [$ancho, $alto, $tipo] = getimagesize($guardada);
+        $this->assertSame([512, 512, IMAGETYPE_JPEG], [$ancho, $alto, $tipo]);
+        $this->assertLessThan(100 * 1024, filesize($guardada));
+    }
+
+    public function test_cambiar_la_foto_borra_la_anterior_y_editar_sin_foto_la_conserva(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->admin());
+        Storage::disk('public')->put('usuarios/fotos/vieja.jpg', 'x');
+        $cajero = User::create(['name' => 'Beto', 'pin_hash' => Hash::make('2468'), 'foto' => 'usuarios/fotos/vieja.jpg']);
+        $cajero->assignRole('cajero');
+        $cajero->sucursales()->attach($this->villaBosh);
+
+        Livewire::test(Edit::class, ['userId' => $cajero->id])
+            ->assertSet('fotoActual', asset('storage/usuarios/fotos/vieja.jpg'))
+            ->set('name', 'Roberto')
+            ->call('update')
+            ->assertHasNoErrors();
+
+        $this->assertSame('usuarios/fotos/vieja.jpg', $cajero->fresh()->foto);
+
+        Livewire::test(Edit::class, ['userId' => $cajero->id])
+            ->set('foto', UploadedFile::fake()->image('nueva.jpg', 800, 600))
+            ->call('update')
+            ->assertHasNoErrors();
+
+        $nueva = $cajero->fresh()->foto;
+        $this->assertNotSame('usuarios/fotos/vieja.jpg', $nueva);
+        Storage::disk('public')->assertExists($nueva);
+        Storage::disk('public')->assertMissing('usuarios/fotos/vieja.jpg');
+        $this->assertSame([512, 512], array_slice(getimagesize(Storage::disk('public')->path($nueva)), 0, 2));
+    }
+
+    public function test_la_foto_rechaza_archivos_que_no_son_imagen_o_pesan_demasiado(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->admin());
+
+        foreach ([
+            UploadedFile::fake()->create('cv.pdf', 100, 'application/pdf'),
+            UploadedFile::fake()->image('enorme.jpg')->size(6000),
+        ] as $archivo) {
+            Livewire::test(Create::class)
+                ->set('name', 'X')->set('role', 'cajero')->set('pin', '1234')->call('elegirSucursal', $this->villaBosh->id)
+                ->set('foto', $archivo)
+                ->call('save')
+                ->assertHasErrors(['foto']);
+        }
+
+        $this->assertSame(1, User::count(), 'Solo el admin del test');
     }
 
     public function test_cajeros_e_inactivos_no_entran_al_manager(): void

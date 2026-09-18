@@ -29,6 +29,7 @@ class Edit extends Component
         $this->active = $this->user->active;
         $this->role = $this->user->roles->first()?->name ?? '';
         $this->sucursales = $this->user->sucursales->pluck('id')->all();
+        $this->fotoActual = $this->user->fotoUrl();
     }
 
     /**

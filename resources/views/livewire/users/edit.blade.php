@@ -18,6 +18,8 @@
         <!-- Formulario -->
         <div class="bg-white rounded-lg shadow-sm p-6">
             <form wire:submit="update" class="space-y-6">
+                @include('livewire.users._foto')
+
                 <!-- Nombre -->
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-2">

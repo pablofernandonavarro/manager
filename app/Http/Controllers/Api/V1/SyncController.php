@@ -368,7 +368,8 @@ class SyncController extends Controller
      * verifica el PIN localmente para poder abrir y autorizar sin conexión.
      *
      * Son usuarios con rol cajero o supervisor asignados a la sucursal. El contrato
-     * (id, nombre, rol, pin_hash) es el mismo que cuando había una tabla `cajeros`.
+     * (id, nombre, rol, pin_hash) es el mismo que cuando había una tabla `cajeros`; `foto_url`
+     * se sumó después y las cajas viejas simplemente lo ignoran.
      */
     public function cajeros(Request $request): JsonResponse
     {
@@ -382,6 +383,7 @@ class SyncController extends Controller
                     'nombre' => $u->name,
                     'rol' => $u->rolDeCaja(),
                     'pin_hash' => $u->pin_hash,
+                    'foto_url' => $u->fotoUrl(),
                 ])->values(),
         ]);
     }

@@ -33,6 +33,7 @@ class User extends Authenticatable
         'email',
         'password',
         'pin_hash',
+        'foto',
         'active',
     ];
 
@@ -64,6 +65,11 @@ class User extends Authenticatable
     public function sucursales(): BelongsToMany
     {
         return $this->belongsToMany(Sucursal::class);
+    }
+
+    public function fotoUrl(): ?string
+    {
+        return $this->foto ? asset('storage/'.$this->foto) : null;
     }
 
     /** `cajero`, `supervisor` o null si no atiende cajas. */
