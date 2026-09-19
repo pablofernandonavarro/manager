@@ -79,7 +79,7 @@ class Index extends Component
             'codigo-instalacion-generado',
             codigo: $codigo->codigo,
             nombre: $pdv->nombre,
-            expira: $codigo->expira_at->format('d/m/Y H:i'),
+            expira: $codigo->expira_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i'),
         );
     }
 

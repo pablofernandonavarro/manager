@@ -73,12 +73,12 @@
             <div class="space-y-3">
                 <div>
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Fecha de envío</p>
-                    <p class="text-base text-gray-900 mt-0.5">{{ $remito->remitido_at->format('d/m/Y H:i') }}</p>
+                    <p class="text-base text-gray-900 mt-0.5">{{ $remito->remitido_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}</p>
                 </div>
                 @if($remito->confirmado_at)
                     <div>
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Fecha de confirmación</p>
-                        <p class="text-base text-gray-900 mt-0.5">{{ $remito->confirmado_at->format('d/m/Y H:i') }}</p>
+                        <p class="text-base text-gray-900 mt-0.5">{{ $remito->confirmado_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}</p>
                     </div>
                 @endif
                 @if($remito->user)

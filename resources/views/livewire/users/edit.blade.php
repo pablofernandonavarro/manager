@@ -110,11 +110,11 @@
                 <!-- Información adicional -->
                 <div class="bg-gray-50 rounded-lg p-4 space-y-2">
                     <p class="text-xs text-gray-600">
-                        <span class="font-medium">Fecha de registro:</span> {{ $user->created_at->format('d/m/Y H:i') }}
+                        <span class="font-medium">Fecha de registro:</span> {{ $user->created_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}
                     </p>
                     @if($user->updated_at->ne($user->created_at))
                         <p class="text-xs text-gray-600">
-                            <span class="font-medium">Última actualización:</span> {{ $user->updated_at->format('d/m/Y H:i') }}
+                            <span class="font-medium">Última actualización:</span> {{ $user->updated_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}
                         </p>
                     @endif
                 </div>

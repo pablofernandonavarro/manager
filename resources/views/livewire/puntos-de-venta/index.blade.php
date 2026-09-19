@@ -396,7 +396,7 @@
                                     Instalada
                                 </span>
                                 <p class="mt-0.5 text-xs text-gray-400">
-                                    {{ \Carbon\Carbon::parse($pdv->instalado_at)->format('d/m/Y H:i') }}
+                                    {{ \Carbon\Carbon::parse($pdv->instalado_at)->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}
                                 </p>
                                 @if($pdv->codigos_pendientes > 0)
                                     <p class="mt-0.5 text-xs text-amber-600">+ código sin usar (reinstalación)</p>
@@ -413,7 +413,7 @@
                                         {{ $uc->comando->label() }}:
                                         @if($uc->estado === 'pendiente') esperando a la caja
                                         @elseif($uc->estado === 'tomado') ejecutando…
-                                        @elseif($uc->estado === 'completado') ✓ {{ $uc->finalizado_at?->format('H:i') }}
+                                        @elseif($uc->estado === 'completado') ✓ {{ $uc->finalizado_at?->timezone(config('app.display_timezone'))->format('H:i') }}
                                         @else ✕ falló
                                         @endif
                                     </p>
@@ -457,7 +457,7 @@
 
                             @if($pdv->ultima_conexion_at)
                                 <p class="mt-1 flex items-center gap-1.5 text-xs {{ $pdv->estaConectada() ? 'text-green-700' : 'text-gray-500' }}"
-                                   title="{{ $pdv->ultima_conexion_at->format('d/m/Y H:i') }}">
+                                   title="{{ $pdv->ultima_conexion_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}">
                                     <span class="w-1.5 h-1.5 rounded-full {{ $pdv->estaConectada() ? 'bg-green-500' : 'bg-gray-400' }}"></span>
                                     {{ $pdv->estaConectada() ? 'En línea' : 'Última conexión '.$pdv->ultima_conexion_at->diffForHumans() }}
                                 </p>

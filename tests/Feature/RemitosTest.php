@@ -335,6 +335,20 @@ class RemitosTest extends TestCase
         $this->get(route('remitos.imprimir', $remito->id))->assertForbidden();
     }
 
+    public function test_el_remito_impreso_muestra_la_hora_argentina(): void
+    {
+        $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [$this->zapatillas->id => 2]);
+
+        // 23:00 del 10/03 en Argentina = 02:00 UTC del 11/03.
+        $remito->forceFill(['remitido_at' => '2025-03-11 02:00:00'])->save();
+
+        $this->actingAs($this->usuarioCon(['remitos.ver']))
+            ->get(route('remitos.imprimir', $remito->id))
+            ->assertOk()
+            ->assertSee('10/03/2025 23:00')
+            ->assertDontSee('11/03/2025 02:00');
+    }
+
     public function test_confirmar_con_cantidad_parcial_deja_el_resto_rechazado(): void
     {
         $remito = $this->servicio()->crear($this->central->id, $this->centro->id, [

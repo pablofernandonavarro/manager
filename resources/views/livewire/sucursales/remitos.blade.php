@@ -90,7 +90,7 @@
                             <strong>{{ $remito->sucursalDestino->nombre }}</strong>
                         </span>
                         <span class="text-xs text-gray-500">
-                            {{ $remito->remitido_at->format('d/m/Y H:i') }}@if($remito->user) · {{ $remito->user->name }}@endif
+                            {{ $remito->remitido_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}@if($remito->user) · {{ $remito->user->name }}@endif
                         </span>
                     </div>
                     <div class="flex items-center gap-3">
@@ -128,7 +128,7 @@
                             @endif
                         @elseif($remito->confirmado_at)
                             <span class="text-xs text-gray-500">
-                                Recibido {{ $remito->confirmado_at->format('d/m/Y H:i') }}
+                                Recibido {{ $remito->confirmado_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}
                                 @if($remito->confirmadoPorCaja)
                                     · en caja {{ $remito->confirmadoPorCaja->nombre }}
                                 @elseif($remito->confirmadoPorUsuario)

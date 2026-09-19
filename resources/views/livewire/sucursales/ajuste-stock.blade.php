@@ -273,7 +273,7 @@
                                 {{ $ajuste->descripcion ?: 'Sin descripción' }}
                             </p>
                             <p class="text-xs text-gray-500 mt-0.5">
-                                {{ $ajuste->aplicado_at?->format('d/m/Y H:i') }}
+                                {{ $ajuste->aplicado_at?->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}
                                 @if($ajuste->user)
                                     — {{ $ajuste->user->name }}
                                 @endif

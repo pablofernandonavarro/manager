@@ -1,3 +1,7 @@
+@php
+    $zona = config('app.display_timezone');
+@endphp
+
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
@@ -93,7 +97,7 @@
                             <td class="px-6 py-4 text-sm text-center text-gray-600">{{ $articulo->cantidad_ventas }}</td>
                             <td class="px-6 py-4 text-sm text-center text-gray-600">{{ $articulo->cantidad_sucursales }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600">
-                                {{ \Carbon\Carbon::parse($articulo->ultima_venta)->format('d/m/Y H:i') }}
+                                {{ \Carbon\Carbon::parse($articulo->ultima_venta)->timezone($zona)->format('d/m/Y H:i') }}
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <span class="text-blue-600 text-sm font-medium">Ver dónde →</span>
@@ -149,7 +153,7 @@
                             @forelse($lineas as $linea)
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-3 text-sm text-gray-600 whitespace-nowrap">
-                                        {{ \Carbon\Carbon::parse($linea->fecha)->format('d/m/Y H:i') }}
+                                        {{ \Carbon\Carbon::parse($linea->fecha)->timezone($zona)->format('d/m/Y H:i') }}
                                     </td>
                                     <td class="px-6 py-3 text-sm font-mono text-gray-700">{{ $linea->numero_venta ?? '—' }}</td>
                                     <td class="px-6 py-3 text-sm font-medium text-gray-900">{{ $linea->sucursal ?? '—' }}</td>
