@@ -35,20 +35,26 @@
             </svg>
         </button>
 
-        <div x-show="abierto" x-cloak x-data="{ so: 'windows' }" class="px-6 pb-6 border-t border-gray-100 pt-5">
+        {{-- Abre en el sistema de la máquina desde donde se mira: quien instala suele entrar desde la caja misma. --}}
+        <div x-show="abierto" x-cloak
+             x-data="{ so: /mac/i.test(navigator.userAgentData?.platform || navigator.platform || '') ? 'mac' : 'windows' }"
+             class="px-6 pb-6 border-t border-gray-100 pt-5">
             <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-5 text-sm text-amber-900">
                 El Manager <strong>no instala el POS a distancia</strong>. Alguien tiene que abrir la app
                 <strong>una vez</strong> en la máquina de la caja y pegar un código. No hace falta instalar
                 PHP ni nada más: la app trae todo adentro.
             </div>
 
-            <div class="mb-5 inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 text-sm">
-                <button type="button" @click="so = 'windows'"
-                        :class="so === 'windows' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
-                        class="px-4 py-1.5 rounded-md font-medium transition-colors">Windows</button>
-                <button type="button" @click="so = 'mac'"
-                        :class="so === 'mac' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
-                        class="px-4 py-1.5 rounded-md font-medium transition-colors">Mac</button>
+            <div class="mb-5 flex flex-wrap items-center gap-3">
+                <span class="text-sm font-semibold text-gray-900">¿En qué computadora vas a instalar la caja?</span>
+                <div class="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 text-sm">
+                    <button type="button" @click="so = 'windows'"
+                            :class="so === 'windows' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+                            class="px-4 py-1.5 rounded-md font-medium transition-colors">Windows</button>
+                    <button type="button" @click="so = 'mac'"
+                            :class="so === 'mac' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+                            class="px-4 py-1.5 rounded-md font-medium transition-colors">Mac</button>
+                </div>
             </div>
 
             <div class="grid md:grid-cols-3 gap-6">
@@ -87,7 +93,7 @@
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                     </svg>
-                                    Descargar POS de escritorio
+                                    Descargar POS para Windows
                                 </a>
                                 <p class="mt-1.5 text-xs text-gray-500">
                                     Versión {{ $escritorio['version'] }} ·
