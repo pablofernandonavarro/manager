@@ -6,7 +6,9 @@
     $plural = fn ($n, string $uno, string $varios) => number_format($n, 0, ',', '.').' '.($n == 1 ? $uno : $varios);
 @endphp
 
-<div class="space-y-6" wire:poll.60s>
+{{-- Con la pestaña oculta Livewire casi no hace poll: al volver se refresca de inmediato, salvo que
+     haya estado oculta muy poco (cada refresco corre todas las consultas del tablero). --}}
+<div class="space-y-6" wire:poll.60s x-data="{ ocultaDesde: null }" x-on:visibilitychange.document="if (document.hidden) { ocultaDesde = Date.now() } else if (Date.now() - (ocultaDesde ?? 0) > 15000) { $wire.$refresh() }">
     {{-- Encabezado --}}
     <div class="sm:flex sm:items-end sm:justify-between gap-4">
         <div>

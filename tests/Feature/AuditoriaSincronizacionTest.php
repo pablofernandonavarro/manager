@@ -81,6 +81,34 @@ class AuditoriaSincronizacionTest extends TestCase
         $this->caja->refresh();
     }
 
+    public function test_la_auditoria_declara_el_poll_y_el_refresco_al_volver_a_la_pestana(): void
+    {
+        $this->actingAs($this->usuarioCon(['terminales.ver']));
+
+        // Solo verifica que el HTML lo declara: Livewire::test no ejecuta JavaScript.
+        Livewire::test(Sincronizacion::class)
+            ->assertSeeHtml('wire:poll.30s')
+            ->assertSeeHtml('visibilitychange.document');
+    }
+
+    public function test_el_poll_va_en_un_elemento_con_clave_segun_el_intervalo(): void
+    {
+        // Cambiar el intervalo sobre la raíz acumulaba polls: la clave hace que Livewire
+        // reemplace el elemento y detenga el anterior.
+        $this->reportar(['ultima_sincronizacion_stock' => now()->subMinutes(30)->toIso8601String()]);
+        $this->actingAs($this->usuarioCon(['terminales.ver']));
+
+        Livewire::test(Sincronizacion::class)
+            ->assertSeeHtml('wire:key="poll-30"');
+
+        $this->caja->forceFill(['stock_descarga_iniciada_at' => now()->subMinutes(5), 'stock_descarga_avance_at' => now()->subSeconds(10)])->save();
+
+        Livewire::test(Sincronizacion::class)
+            ->assertSeeHtml('wire:key="poll-10"')
+            ->assertSeeHtml('wire:poll.10s')
+            ->assertDontSeeHtml('wire:poll.30s');
+    }
+
     public function test_sin_permiso_no_se_entra_a_la_pantalla(): void
     {
         $this->actingAs($this->usuarioCon([]));

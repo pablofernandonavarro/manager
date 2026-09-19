@@ -1,8 +1,15 @@
 @php
     $puedeMandarOrdenes = auth()->user()->can('terminales.comandos');
+    // Con la pestaña oculta Livewire casi no hace poll: al volver se refresca de inmediato, salvo
+    // que haya estado oculta muy poco (cada refresco recorre todas las cajas).
+    $intervaloPoll = $hayComandoEnCurso ? 3 : ($cajasEnProceso > 0 ? 10 : 30);
 @endphp
 
-<div class="space-y-6" @if($hayComandoEnCurso) wire:poll.3s @elseif($cajasEnProceso > 0) wire:poll.10s @else wire:poll.30s @endif>
+<div class="space-y-6" x-data="{ ocultaDesde: null }" x-on:visibilitychange.document="if (document.hidden) { ocultaDesde = Date.now() } else if (Date.now() - (ocultaDesde ?? 0) > 15000) { $wire.$refresh() }">
+    {{-- El poll va en un hijo con clave según el intervalo: al cambiar de intervalo Livewire reemplaza
+         el elemento y detiene el poll anterior. Cambiar el atributo en la raíz los acumulaba. --}}
+    <div wire:key="poll-{{ $intervaloPoll }}" wire:poll.{{ $intervaloPoll }}s class="hidden"></div>
+
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>

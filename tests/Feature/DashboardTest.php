@@ -142,6 +142,32 @@ class DashboardTest extends TestCase
             ->assertDontSee('con stock crítico');
     }
 
+    public function test_una_venta_nueva_aparece_en_el_tablero_al_refrescar_sin_recargar_la_pagina(): void
+    {
+        Permission::findOrCreate('reportes.ver', 'web');
+        $usuario = User::factory()->create();
+        $usuario->givePermissionTo('reportes.ver');
+        $this->actingAs($usuario);
+
+        $tablero = Livewire::test(Dashboard::class);
+        $this->assertSame(0, $tablero->viewData('ventas')['hoy']['cantidad']);
+
+        $this->venta('2026-09-18 15:00', 3000, 2);
+        $tablero->call('$refresh');
+
+        $this->assertSame(1, $tablero->viewData('ventas')['hoy']['cantidad']);
+    }
+
+    public function test_el_tablero_declara_el_poll_y_el_refresco_al_volver_a_la_pestana(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Solo verifica que el HTML lo declara: Livewire::test no ejecuta JavaScript.
+        Livewire::test(Dashboard::class)
+            ->assertSeeHtml('wire:poll.60s')
+            ->assertSeeHtml('visibilitychange.document');
+    }
+
     public function test_sin_permisos_no_muestra_numeros(): void
     {
         $this->venta('2026-09-18 10:00', 3000, 2);
