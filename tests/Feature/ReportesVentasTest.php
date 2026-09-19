@@ -13,6 +13,7 @@ use App\Services\ReporteVentasService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -137,6 +138,35 @@ class ReportesVentasTest extends TestCase
         $this->assertSame(['medio' => 'credito', 'tarjeta' => 'visa', 'banco' => 'Galicia', 'cuotas' => 3, 'cantidad' => 1, 'importe' => 3200.0], $visa);
 
         $this->assertSame([['promocion' => 'Galicia 20%', 'usos' => 1, 'descuento' => 800.0, 'cobrado' => 3200.0]], $servicio->promociones($this->filtros()));
+    }
+
+    public function test_por_dia_corta_en_la_medianoche_argentina_y_respeta_la_sucursal(): void
+    {
+        // 14/09 a las 23:59 y 15/09 a las 00:00 en Argentina: cada una en su día, aunque en UTC
+        // (02:59 y 03:00 del día siguiente) las dos caen del mismo lado del reloj.
+        $this->venta($this->cajaVb, '2026-09-14 23:59', 'Ana', 1000, 0, [['medio' => 'efectivo', 'monto' => 1000, 'importe' => 1000]], 1);
+        $this->venta($this->cajaVb, '2026-09-15 00:00', 'Ana', 2000, 0, [['medio' => 'efectivo', 'monto' => 2000, 'importe' => 2000]], 1);
+        $this->venta($this->cajaCentro, '2026-09-15 08:00', 'Beto', 500.55, 0, [['medio' => 'efectivo', 'monto' => 500.55, 'importe' => 500.55]], 1);
+
+        $servicio = app(ReporteVentasService::class);
+        $rango = ['desde' => '2026-09-14', 'hasta' => '2026-09-15'];
+
+        $this->assertSame(
+            [['dia' => '2026-09-14', 'cantidad' => 1, 'total' => 1000.0], ['dia' => '2026-09-15', 'cantidad' => 2, 'total' => 2500.55]],
+            $servicio->porDia($rango),
+        );
+
+        $soloVillaBosh = $servicio->porDia([...$rango, 'sucursal_id' => $this->cajaVb->sucursal_id]);
+        $this->assertSame(
+            [['dia' => '2026-09-14', 'cantidad' => 1, 'total' => 1000.0], ['dia' => '2026-09-15', 'cantidad' => 1, 'total' => 2000.0]],
+            $soloVillaBosh,
+        );
+    }
+
+    public function test_ventas_y_devoluciones_tienen_indice_por_fecha(): void
+    {
+        $this->assertTrue(Schema::hasIndex('ventas', ['fecha']));
+        $this->assertTrue(Schema::hasIndex('devoluciones', ['fecha']));
     }
 
     public function test_filtros_por_sucursal_caja_y_cajero(): void

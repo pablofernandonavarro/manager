@@ -165,27 +165,28 @@ class ReporteVentasService
     }
 
     /**
-     * Agrupado por día local. Se agrupa en PHP y no en SQL porque la conversión de zona
-     * horaria en MySQL depende de que el servidor tenga cargadas las tablas de zonas.
+     * Agrupado por día local, en SQL: hidratar cada venta como modelo para agruparla en PHP
+     * tardaba segundos con decenas de miles de ventas (el tablero lo pide en cada refresco).
+     *
+     * Se convierte con el desplazamiento numérico de la zona (`-03:00`), que MySQL resuelve sin
+     * las tablas de zonas horarias. Vale mientras la zona no cambie de desplazamiento dentro del
+     * rango pedido: Argentina no tiene horario de verano. Si volviera, habría que agrupar por
+     * tramos.
      *
      * @param  Filtros  $filtros
      * @return array<int, array{dia: string, cantidad: int, total: float}>
      */
     public function porDia(array $filtros): array
     {
-        $zona = config('app.display_timezone');
-        $dias = [];
+        $desplazamiento = Carbon::now(config('app.display_timezone'))->format('P');
 
-        foreach ($this->ventas($filtros)->select(['fecha', 'total'])->cursor() as $venta) {
-            $dia = $venta->fecha->timezone($zona)->toDateString();
-            $dias[$dia] ??= ['dia' => $dia, 'cantidad' => 0, 'centavos' => 0];
-            $dias[$dia]['cantidad']++;
-            $dias[$dia]['centavos'] += (int) round((float) $venta->total * 100);
-        }
-
-        ksort($dias);
-
-        return array_values(array_map(fn ($d) => ['dia' => $d['dia'], 'cantidad' => $d['cantidad'], 'total' => round($d['centavos'] / 100, 2)], $dias));
+        return $this->ventas($filtros)->toBase()
+            ->selectRaw("DATE(CONVERT_TZ(ventas.fecha, '+00:00', ?)) as dia, COUNT(*) as cantidad, SUM(ventas.total) as total", [$desplazamiento])
+            ->groupBy('dia')
+            ->orderBy('dia')
+            ->get()
+            ->map(fn ($f) => ['dia' => $f->dia, 'cantidad' => (int) $f->cantidad, 'total' => round((float) $f->total, 2)])
+            ->all();
     }
 
     /**
