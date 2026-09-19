@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -35,6 +36,19 @@ final class AppEscritorio
         $archivo = "{$base}.{$meta['formato']}";
 
         return file_exists($archivo) ? [...$meta, 'archivo' => $archivo] : null;
+    }
+
+    /**
+     * Cuándo se publicó la versión vigente: sirve para saber si una caja con versión anterior
+     * estaba conectada después, o sea, si pudo haberse puesto a actualizar.
+     *
+     * @param  array{generado_at?: string}|null  $publicada  la ya leída, para no abrir el archivo dos veces
+     */
+    public static function fechaDePublicacion(?array $publicada = null): ?Carbon
+    {
+        $generado = ($publicada ?? self::publicada())['generado_at'] ?? null;
+
+        return $generado ? Carbon::parse($generado) : null;
     }
 
     /** Versión contra la que se compara una caja de escritorio (la misma en las dos plataformas). */

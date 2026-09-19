@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\SaludCaja;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,15 +38,16 @@ class PuntoDeVenta extends Model
             'stock_descarga_iniciada_at' => 'datetime',
             'stock_descarga_avance_at' => 'datetime',
             'stock_descarga_terminada_at' => 'datetime',
+            'version_actualizada_at' => 'datetime',
         ];
     }
 
     /**
      * @return array{nivel: string, problemas: array<int, array{nivel: string, texto: string}>}
      */
-    public function salud(?string $ultimaVersion = null): array
+    public function salud(?string $ultimaVersion = null, ?CarbonInterface $publicadaAt = null): array
     {
-        return SaludCaja::evaluar($this, $ultimaVersion);
+        return SaludCaja::evaluar($this, $ultimaVersion, publicadaAt: $publicadaAt);
     }
 
     /** Conectada si habló con el Manager hace poco: la caja consulta cada minuto. */

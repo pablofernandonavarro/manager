@@ -43,6 +43,12 @@ final class SaludCaja
     /** Minutos que se espera el próximo reporte de la caja después de que termina de bajar el stock. */
     private const DESCARGA_STOCK_ESPERA_REPORTE_MIN = 3;
 
+    /** Hasta cuántos minutos sin conexión se presume que una caja de versión vieja se está actualizando. */
+    private const ACTUALIZACION_SIN_CONEXION_MAX_MIN = 20;
+
+    /** Minutos que se espera el primer reporte de una caja que acaba de reiniciar con otra versión. */
+    private const REINICIO_ESPERA_REPORTE_MIN = 10;
+
     /**
      * Colores y label de cada nivel, para no duplicar este mapping en cada vista que
      * muestra el badge de salud de una caja.
@@ -65,7 +71,7 @@ final class SaludCaja
     /**
      * @return array{nivel: string, problemas: array<int, array{nivel: string, texto: string}>}
      */
-    public static function evaluar(PuntoDeVenta $pdv, ?string $ultimaVersion = null, ?CarbonInterface $ahora = null): array
+    public static function evaluar(PuntoDeVenta $pdv, ?string $ultimaVersion = null, ?CarbonInterface $ahora = null, ?CarbonInterface $publicadaAt = null): array
     {
         $ahora ??= now();
 
@@ -81,14 +87,20 @@ final class SaludCaja
         $problemas = [];
         $minutosSinConexion = $pdv->ultima_conexion_at->diffInMinutes($ahora);
 
-        if ($minutosSinConexion > 10) {
-            $problemas[] = [self::CRITICO, 'Sin conexión hace '.self::duracion($pdv->ultima_conexion_at, $ahora)];
-        } elseif ($minutosSinConexion > 3) {
-            $problemas[] = [self::ALERTA, 'Sin conexión hace '.self::duracion($pdv->ultima_conexion_at, $ahora)];
-        }
+        $actualizandose = self::actualizandose($pdv, $ultimaVersion, $publicadaAt, $ahora, $minutosSinConexion);
 
-        if ($ultimaVersion && $pdv->version_pos && version_compare($pdv->version_pos, $ultimaVersion, '<')) {
-            $problemas[] = [self::ALERTA, "Versión {$pdv->version_pos} desactualizada (última {$ultimaVersion})"];
+        if ($actualizandose !== null) {
+            $problemas[] = [self::EN_PROCESO, $actualizandose];
+        } else {
+            if ($minutosSinConexion > 10) {
+                $problemas[] = [self::CRITICO, 'Sin conexión hace '.self::duracion($pdv->ultima_conexion_at, $ahora)];
+            } elseif ($minutosSinConexion > 3) {
+                $problemas[] = [self::ALERTA, 'Sin conexión hace '.self::duracion($pdv->ultima_conexion_at, $ahora)];
+            }
+
+            if ($ultimaVersion && $pdv->version_pos && version_compare($pdv->version_pos, $ultimaVersion, '<')) {
+                $problemas[] = [self::ALERTA, "Versión {$pdv->version_pos} desactualizada (última {$ultimaVersion})"];
+            }
         }
 
         $estado = $pdv->estado_caja;
@@ -99,7 +111,11 @@ final class SaludCaja
             return self::resultado($problemas);
         }
 
-        if ($pdv->estado_reportado_at->diffInMinutes($ahora) > 5 && $minutosSinConexion <= 10) {
+        $reinicio = self::reinicioTrasActualizar($pdv, $ahora);
+
+        if ($reinicio !== null) {
+            $problemas[] = [self::EN_PROCESO, $reinicio];
+        } elseif ($actualizandose === null && $pdv->estado_reportado_at->diffInMinutes($ahora) > 5 && $minutosSinConexion <= 10) {
             $problemas[] = [self::ALERTA, 'Dejó de informar su estado hace '.self::duracion($pdv->estado_reportado_at, $ahora)];
         }
 
@@ -167,6 +183,49 @@ final class SaludCaja
             'nivel' => $nivel,
             'problemas' => array_map(fn ($p) => ['nivel' => $p[0], 'texto' => $p[1]], $problemas),
         ];
+    }
+
+    /**
+     * Texto si una caja de escritorio parece estar reemplazándose por la versión publicada, o null.
+     *
+     * El escritorio se actualiza cerrando el POS y reemplazando la carpeta, y el Manager no se
+     * entera: solo ve una caja que dejó de hablar. Se presume una actualización si tiene una
+     * versión anterior a la publicada, estaba conectada después de la publicación y lleva pocos
+     * minutos sin conexión. Es una presunción: pasados ACTUALIZACION_SIN_CONEXION_MAX_MIN minutos
+     * vuelve a evaluarse como caída.
+     */
+    private static function actualizandose(PuntoDeVenta $pdv, ?string $ultimaVersion, ?CarbonInterface $publicadaAt, CarbonInterface $ahora, float|int $minutosSinConexion): ?string
+    {
+        if (
+            $pdv->tipo_instalacion !== 'escritorio' || ! $ultimaVersion || ! $publicadaAt || ! $pdv->version_pos
+            || version_compare($pdv->version_pos, $ultimaVersion, '>=')
+            || $minutosSinConexion <= 3 || $minutosSinConexion > self::ACTUALIZACION_SIN_CONEXION_MAX_MIN
+            || $pdv->ultima_conexion_at->lt($publicadaAt)
+        ) {
+            return null;
+        }
+
+        return 'Sin conexión hace '.self::duracion($pdv->ultima_conexion_at, $ahora).": probablemente se está actualizando a {$ultimaVersion}";
+    }
+
+    /**
+     * Texto si la caja acaba de abrir con otra versión y todavía no mandó su primer reporte, o
+     * null. Sin esto, ese rato se veía como "dejó de informar su estado": el último reporte es
+     * de antes de cerrarla.
+     */
+    private static function reinicioTrasActualizar(PuntoDeVenta $pdv, CarbonInterface $ahora): ?string
+    {
+        $cambio = $pdv->version_actualizada_at;
+
+        if (
+            ! $cambio || ! $pdv->version_anterior
+            || $cambio->diffInMinutes($ahora) > self::REINICIO_ESPERA_REPORTE_MIN
+            || $pdv->estado_reportado_at?->gte($cambio)
+        ) {
+            return null;
+        }
+
+        return "Reinició con la versión {$pdv->version_pos} (antes {$pdv->version_anterior}): esperando su primer reporte";
     }
 
     /**

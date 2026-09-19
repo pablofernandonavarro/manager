@@ -196,6 +196,8 @@ class Index extends Component
             'clasica' => VersionPos::vigente()?->version,
         ];
 
+        $publicadaAt = AppEscritorio::fechaDePublicacion($escritorio);
+
         $puntosDeVenta = PuntoDeVenta::with(['sucursal', 'ultimoComando'])
             // Para mostrar si la caja ya se instaló alguna vez y si tiene un código
             // sin usar. Sin esto no hay forma de saber desde el Manager en qué estado
@@ -210,7 +212,7 @@ class Index extends Component
 
         // Solo las instaladas: una caja dada de alta y sin instalar no es un problema.
         $salud = $puntosDeVenta->filter(fn ($p) => $p->instalado_at)
-            ->mapWithKeys(fn ($p) => [$p->id => $p->salud($ultimaVersion[$p->tipo_instalacion] ?? null)]);
+            ->mapWithKeys(fn ($p) => [$p->id => $p->salud($ultimaVersion[$p->tipo_instalacion] ?? null, $publicadaAt)]);
 
         return view('livewire.puntos-de-venta.index', [
             'salud' => $salud,

@@ -60,6 +60,7 @@ class Sincronizacion extends Component
     public function render(): mixed
     {
         $ultimaVersion = $this->ultimaVersionPorTipo();
+        $publicadaAt = AppEscritorio::fechaDePublicacion();
 
         $puntosDeVenta = PuntoDeVenta::with(['sucursal', 'ultimoComando'])
             ->withMax('codigosInstalacion as instalado_at', 'usado_at')
@@ -73,7 +74,7 @@ class Sincronizacion extends Component
 
         $filas = $puntosDeVenta->map(fn ($pdv) => [
             'pdv' => $pdv,
-            'salud' => $pdv->salud($ultimaVersion[$pdv->tipo_instalacion] ?? null),
+            'salud' => $pdv->salud($ultimaVersion[$pdv->tipo_instalacion] ?? null, $publicadaAt),
         ])->filter(function (array $fila) {
             return match ($this->nivel) {
                 'problemas' => in_array($fila['salud']['nivel'], ['critico', 'alerta'], true),
@@ -83,7 +84,7 @@ class Sincronizacion extends Component
             };
         })->values();
 
-        $todaLaSalud = $puntosDeVenta->map(fn ($pdv) => $pdv->salud($ultimaVersion[$pdv->tipo_instalacion] ?? null));
+        $todaLaSalud = $puntosDeVenta->map(fn ($pdv) => $pdv->salud($ultimaVersion[$pdv->tipo_instalacion] ?? null, $publicadaAt));
 
         // Cada caja informa su estado y consulta órdenes una vez por minuto (pos:comandos):
         // con una orden en camino conviene refrescar más seguido para ver el resultado apenas

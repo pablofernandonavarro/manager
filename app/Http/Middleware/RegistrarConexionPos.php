@@ -38,6 +38,11 @@ class RegistrarConexionPos
         $version = mb_substr(trim((string) $request->header('X-POS-Version')), 0, 50);
         if ($version !== '' && preg_match('/^[\w.\-]+$/', $version)) {
             $datos['version_pos'] = $version;
+
+            if ($pdv->version_pos !== null && $pdv->version_pos !== $version) {
+                $datos['version_anterior'] = $pdv->version_pos;
+                $datos['version_actualizada_at'] = now();
+            }
         }
 
         $tipo = strtolower((string) $request->header('X-POS-Tipo'));
