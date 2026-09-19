@@ -21,6 +21,9 @@ final class SaludCaja
 
     public const OK = 'ok';
 
+    /** Está bajando el stock ahora mismo: no es un problema, pero tampoco "todo bien". */
+    public const EN_PROCESO = 'en_proceso';
+
     public const SIN_DATOS = 'sin_datos';
 
     public const INACTIVA = 'inactiva';
@@ -34,6 +37,12 @@ final class SaludCaja
 
     private const JOBS_ACUMULADOS = 20;
 
+    /** Minutos sin pedir la página siguiente a partir de los cuales una descarga de stock ya no se da por en curso. */
+    private const DESCARGA_STOCK_SIN_AVANCE_MIN = 3;
+
+    /** Minutos que se espera el próximo reporte de la caja después de que termina de bajar el stock. */
+    private const DESCARGA_STOCK_ESPERA_REPORTE_MIN = 3;
+
     /**
      * Colores y label de cada nivel, para no duplicar este mapping en cada vista que
      * muestra el badge de salud de una caja.
@@ -46,6 +55,7 @@ final class SaludCaja
             self::CRITICO => ['bg-red-100 text-red-800', 'bg-red-500', 'Con problemas'],
             self::ALERTA => ['bg-amber-100 text-amber-800', 'bg-amber-500', 'Revisar'],
             self::OK => ['bg-green-100 text-green-800', 'bg-green-500', 'Todo bien'],
+            self::EN_PROCESO => ['bg-blue-100 text-blue-800', 'bg-blue-500', 'En proceso'],
             self::SIN_DATOS => ['bg-gray-100 text-gray-600', 'bg-gray-400', 'Sin datos'],
             self::INACTIVA => ['bg-gray-100 text-gray-500', 'bg-gray-300', 'Inactiva'],
             default => ['bg-gray-100 text-gray-600', 'bg-gray-400', $nivel],
@@ -96,7 +106,11 @@ final class SaludCaja
         $generado = self::fecha($estado['generado_at'] ?? null) ?? $pdv->estado_reportado_at;
         $stock = self::fecha($estado['ultima_sincronizacion_stock'] ?? null);
 
-        if (! empty($estado['catalogo_pendiente'])) {
+        $descarga = self::descargaDeStock($pdv, $ahora);
+
+        if ($descarga !== null) {
+            $problemas[] = [self::EN_PROCESO, $descarga];
+        } elseif (! empty($estado['catalogo_pendiente'])) {
             $problemas[] = [self::ALERTA, 'Todavía está bajando el catálogo: no envía ventas'];
         } elseif ($stock === null) {
             $problemas[] = [self::CRITICO, 'Nunca bajó el stock'];
@@ -144,6 +158,7 @@ final class SaludCaja
         $nivel = match (true) {
             in_array(self::CRITICO, $niveles, true) => self::CRITICO,
             in_array(self::ALERTA, $niveles, true) => self::ALERTA,
+            in_array(self::EN_PROCESO, $niveles, true) => self::EN_PROCESO,
             in_array(self::SIN_DATOS, $niveles, true) => self::SIN_DATOS,
             default => self::OK,
         };
@@ -152,6 +167,38 @@ final class SaludCaja
             'nivel' => $nivel,
             'problemas' => array_map(fn ($p) => ['nivel' => $p[0], 'texto' => $p[1]], $problemas),
         ];
+    }
+
+    /**
+     * Texto si la caja está bajando el stock, o null si no. El Manager la ve pedir las páginas
+     * (`SyncController::stock`), así que no depende de lo que ella informe: la caja anota su
+     * última sincronización recién al terminar, y hasta entonces parecería trabada.
+     *
+     * Solo cuenta si la última página se pidió hace poco: una caja que se apaga o pierde la red
+     * a mitad de la descarga vuelve a evaluarse como trabada. Al terminar hay una espera corta
+     * hasta que la caja informa el stock nuevo (reporta cada minuto).
+     */
+    private static function descargaDeStock(PuntoDeVenta $pdv, CarbonInterface $ahora): ?string
+    {
+        $iniciada = $pdv->stock_descarga_iniciada_at;
+        $avance = $pdv->stock_descarga_avance_at;
+        $terminada = $pdv->stock_descarga_terminada_at;
+
+        if (! $iniciada || ! $avance) {
+            return null;
+        }
+
+        if ($terminada === null) {
+            return $avance->diffInMinutes($ahora) <= self::DESCARGA_STOCK_SIN_AVANCE_MIN
+                ? 'Descargando stock desde hace '.self::duracion($iniciada, $ahora)
+                : null;
+        }
+
+        $sinReportarAun = ! $pdv->estado_reportado_at || $pdv->estado_reportado_at->lt($terminada);
+
+        return $sinReportarAun && $terminada->diffInMinutes($ahora) <= self::DESCARGA_STOCK_ESPERA_REPORTE_MIN
+            ? 'Terminando de actualizar el stock'
+            : null;
     }
 
     /** "25 min", "11 h", "3 días": sin depender del locale de la app (está en inglés). */

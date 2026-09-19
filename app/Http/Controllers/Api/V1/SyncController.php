@@ -13,6 +13,7 @@ use App\Models\DetallePrecio;
 use App\Models\MovimientoStock;
 use App\Models\Product;
 use App\Models\PromocionBancaria;
+use App\Models\PuntoDeVenta;
 use App\Models\Remito;
 use App\Models\StockSucursal;
 use App\Models\Sucursal;
@@ -233,10 +234,13 @@ class SyncController extends Controller
             }
 
             $filas = CursorSync::aplicar($query, 'stock_sucursal', $pagina)->limit($pagina['limite'])->get();
+            $siguiente = CursorSync::siguiente($filas->last(), $filas->count(), $pagina);
+
+            $this->registrarAvanceDeDescargaDeStock($pdv, $pagina['despues'] === null, $siguiente === null);
 
             return response()->json([
                 'data' => $filas->map($fila)->values(),
-                'next_cursor' => CursorSync::siguiente($filas->last(), $filas->count(), $pagina),
+                'next_cursor' => $siguiente,
                 'synced_at' => CursorSync::marca($pagina['hasta']),
             ]);
         }
@@ -255,6 +259,27 @@ class SyncController extends Controller
             }
             echo '],"synced_at":'.json_encode(CursorSync::marca($syncedAt)).'}';
         }, 200, ['Content-Type' => 'application/json']);
+    }
+
+    /**
+     * Anota cómo va la descarga de stock de la caja, para que la salud distinga "está bajando"
+     * de "dejó de bajar": la caja anota su última sincronización recién al terminar todas las
+     * páginas, y una descarga larga (caja nueva, reconciliación diaria) parecía un sync trabado.
+     * La descarga de una sola página, la de todos los minutos, no escribe nada.
+     */
+    private function registrarAvanceDeDescargaDeStock(PuntoDeVenta $pdv, bool $primera, bool $ultima): void
+    {
+        if ($primera && $ultima) {
+            return;
+        }
+
+        $ahora = now();
+
+        PuntoDeVenta::whereKey($pdv->getKey())->update(match (true) {
+            $primera => ['stock_descarga_iniciada_at' => $ahora, 'stock_descarga_avance_at' => $ahora, 'stock_descarga_terminada_at' => null],
+            $ultima => ['stock_descarga_avance_at' => $ahora, 'stock_descarga_terminada_at' => $ahora],
+            default => ['stock_descarga_avance_at' => $ahora],
+        });
     }
 
     /**

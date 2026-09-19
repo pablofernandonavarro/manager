@@ -117,7 +117,7 @@ class DashboardService
 
         // Contra qué versión se compara cada caja: igual que Puntos de venta.
         $ultima = ['clasica' => VersionPos::vigente()?->version, 'escritorio' => AppEscritorio::ultimaVersion()];
-        $conteo = [SaludCaja::OK => 0, SaludCaja::ALERTA => 0, SaludCaja::CRITICO => 0, SaludCaja::SIN_DATOS => 0, SaludCaja::INACTIVA => 0];
+        $conteo = [SaludCaja::OK => 0, SaludCaja::EN_PROCESO => 0, SaludCaja::ALERTA => 0, SaludCaja::CRITICO => 0, SaludCaja::SIN_DATOS => 0, SaludCaja::INACTIVA => 0];
         $problemas = [];
 
         foreach ($cajas as $caja) {

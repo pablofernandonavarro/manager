@@ -97,6 +97,7 @@ class Sincronizacion extends Component
             'hayComandoEnCurso' => $hayComandoEnCurso,
             'cajasCriticas' => $todaLaSalud->where('nivel', 'critico')->count(),
             'cajasEnAlerta' => $todaLaSalud->where('nivel', 'alerta')->count(),
+            'cajasEnProceso' => $todaLaSalud->where('nivel', 'en_proceso')->count(),
             'cajasOk' => $todaLaSalud->where('nivel', 'ok')->count(),
             'cajasSinDatos' => $todaLaSalud->whereIn('nivel', ['sin_datos', 'inactiva'])->count(),
             'listaSucursales' => Sucursal::orderBy('nombre')->get(),

@@ -173,8 +173,9 @@
                     <h2 class="text-base font-semibold text-gray-900">Cajas</h2>
                     <a href="/puntos-de-venta" wire:navigate class="text-sm text-blue-600 hover:text-blue-800">Ver todas</a>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-center mb-4">
+                <div class="grid grid-cols-4 gap-2 text-center mb-4">
                     <div class="rounded-lg bg-green-50 py-2"><p class="text-xl font-bold text-green-700">{{ $cajas['conteo']['ok'] }}</p><p class="text-xs text-green-700">Bien</p></div>
+                    <div class="rounded-lg bg-blue-50 py-2"><p class="text-xl font-bold text-blue-700">{{ $cajas['conteo']['en_proceso'] }}</p><p class="text-xs text-blue-700">En proceso</p></div>
                     <div class="rounded-lg bg-amber-50 py-2"><p class="text-xl font-bold text-amber-700">{{ $cajas['conteo']['alerta'] }}</p><p class="text-xs text-amber-700">Alerta</p></div>
                     <div class="rounded-lg bg-red-50 py-2"><p class="text-xl font-bold text-red-700">{{ $cajas['conteo']['critico'] }}</p><p class="text-xs text-red-700">Problemas</p></div>
                 </div>

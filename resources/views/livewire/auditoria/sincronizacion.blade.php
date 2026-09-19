@@ -2,7 +2,7 @@
     $puedeMandarOrdenes = auth()->user()->can('terminales.comandos');
 @endphp
 
-<div class="space-y-6" @if($hayComandoEnCurso) wire:poll.3s @else wire:poll.30s @endif>
+<div class="space-y-6" @if($hayComandoEnCurso) wire:poll.3s @elseif($cajasEnProceso > 0) wire:poll.10s @else wire:poll.30s @endif>
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
@@ -18,7 +18,7 @@
     @endif
 
     <!-- Resumen -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Con problemas</p>
             <p class="mt-1 text-2xl font-bold text-red-600">{{ $cajasCriticas }}</p>
@@ -26,6 +26,10 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">A revisar</p>
             <p class="mt-1 text-2xl font-bold text-amber-600">{{ $cajasEnAlerta }}</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">En proceso</p>
+            <p class="mt-1 text-2xl font-bold text-blue-600">{{ $cajasEnProceso }}</p>
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Al día</p>
@@ -71,7 +75,11 @@
                             <span class="text-sm font-semibold text-gray-900">{{ $pdv->nombre }}</span>
                         </div>
                         <span class="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium {{ $badgeClases }}">
-                            <span class="w-1.5 h-1.5 rounded-full {{ $puntoClase }}"></span>
+                            @if($s['nivel'] === 'en_proceso')
+                                <svg class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            @else
+                                <span class="w-1.5 h-1.5 rounded-full {{ $puntoClase }}"></span>
+                            @endif
                             {{ $label }}
                         </span>
                     </div>
@@ -111,7 +119,11 @@
                         <div>
                             <p class="text-xs text-gray-500">Stock</p>
                             <p class="text-sm font-medium text-gray-900">
-                                {{ isset($estado['ultima_sincronizacion_stock']) ? \Carbon\Carbon::parse($estado['ultima_sincronizacion_stock'])->diffForHumans() : 'Nunca' }}
+                                @if(collect($s['problemas'])->contains('nivel', 'en_proceso'))
+                                    <span class="text-blue-700">Actualizando…</span>
+                                @else
+                                    {{ isset($estado['ultima_sincronizacion_stock']) ? \Carbon\Carbon::parse($estado['ultima_sincronizacion_stock'])->diffForHumans() : 'Nunca' }}
+                                @endif
                             </p>
                         </div>
                         <div>

@@ -34,6 +34,9 @@ class PuntoDeVenta extends Model
             'ultima_conexion_at' => 'datetime',
             'estado_caja' => 'array',
             'estado_reportado_at' => 'datetime',
+            'stock_descarga_iniciada_at' => 'datetime',
+            'stock_descarga_avance_at' => 'datetime',
+            'stock_descarga_terminada_at' => 'datetime',
         ];
     }
 

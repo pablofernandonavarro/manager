@@ -79,6 +79,127 @@ class SaludCajasTest extends TestCase
         $this->assertStringContainsString('No baja stock hace 11 h', $salud['problemas'][0]['texto']);
     }
 
+    /** @param array<string, \DateTimeInterface|null> $descarga */
+    private function descargandoStock(array $descarga): void
+    {
+        $this->caja->forceFill($descarga)->save();
+        $this->caja->refresh();
+    }
+
+    public function test_una_descarga_de_stock_en_curso_es_un_estado_en_proceso_y_no_un_error(): void
+    {
+        $this->reportar($this->reporte(['ultima_sincronizacion_stock' => now()->subMinutes(30)->toIso8601String()]));
+        $this->assertSame('critico', $this->caja->salud()['nivel'], 'sin descarga en curso, es un sync trabado');
+
+        $this->descargandoStock([
+            'stock_descarga_iniciada_at' => now()->subMinutes(12),
+            'stock_descarga_avance_at' => now()->subMinute(),
+        ]);
+
+        $salud = $this->caja->salud();
+
+        $this->assertSame('en_proceso', $salud['nivel']);
+        $this->assertSame('Descargando stock desde hace 12 min', $salud['problemas'][0]['texto']);
+    }
+
+    public function test_una_caja_nueva_que_todavia_no_bajo_stock_no_es_critica_mientras_lo_baja(): void
+    {
+        $this->reportar($this->reporte(['ultima_sincronizacion_stock' => null]));
+        $this->assertStringContainsString('Nunca bajó el stock', $this->caja->salud()['problemas'][0]['texto']);
+
+        $this->descargandoStock([
+            'stock_descarga_iniciada_at' => now()->subMinutes(2),
+            'stock_descarga_avance_at' => now()->subSeconds(20),
+        ]);
+
+        $this->assertSame('en_proceso', $this->caja->salud()['nivel']);
+    }
+
+    public function test_si_la_descarga_deja_de_avanzar_vuelve_a_ser_un_sync_trabado(): void
+    {
+        $this->reportar($this->reporte(['ultima_sincronizacion_stock' => now()->subMinutes(30)->toIso8601String()]));
+
+        $this->descargandoStock([
+            'stock_descarga_iniciada_at' => now()->subMinutes(20),
+            'stock_descarga_avance_at' => now()->subMinutes(5),
+        ]);
+
+        $salud = $this->caja->salud();
+
+        $this->assertSame('critico', $salud['nivel']);
+        $this->assertStringContainsString('sync trabado', $salud['problemas'][0]['texto']);
+    }
+
+    public function test_un_problema_real_no_queda_tapado_por_la_descarga_en_curso(): void
+    {
+        $this->reportar($this->reporte(['jobs_fallidos' => 2]));
+        $this->descargandoStock([
+            'stock_descarga_iniciada_at' => now()->subMinutes(4),
+            'stock_descarga_avance_at' => now()->subSeconds(10),
+        ]);
+
+        $salud = $this->caja->salud();
+
+        $this->assertSame('alerta', $salud['nivel']);
+        $this->assertSame(['en_proceso', 'alerta'], array_column($salud['problemas'], 'nivel'));
+    }
+
+    public function test_al_terminar_de_bajar_espera_el_proximo_reporte_y_despues_vuelve_a_evaluar(): void
+    {
+        $this->reportar($this->reporte(['ultima_sincronizacion_stock' => now()->subMinutes(30)->toIso8601String()]));
+
+        $this->travel(30)->seconds();
+        $this->descargandoStock([
+            'stock_descarga_iniciada_at' => now()->subMinutes(15),
+            'stock_descarga_avance_at' => now(),
+            'stock_descarga_terminada_at' => now(),
+        ]);
+
+        $this->assertSame('en_proceso', $this->caja->salud()['nivel']);
+        $this->assertSame('Terminando de actualizar el stock', $this->caja->salud()['problemas'][0]['texto']);
+
+        $this->travel(20)->seconds();
+        $this->reportar($this->reporte());
+        $this->assertSame('ok', $this->caja->salud()['nivel']);
+    }
+
+    public function test_si_la_caja_no_informa_tras_terminar_la_descarga_vuelve_a_ser_un_sync_trabado(): void
+    {
+        $this->reportar($this->reporte(['ultima_sincronizacion_stock' => now()->subMinutes(30)->toIso8601String()]));
+
+        $this->travel(30)->seconds();
+        $this->descargandoStock([
+            'stock_descarga_iniciada_at' => now()->subMinutes(15),
+            'stock_descarga_avance_at' => now(),
+            'stock_descarga_terminada_at' => now(),
+        ]);
+
+        $this->travel(4)->minutes();
+
+        $this->assertSame('critico', $this->caja->salud()['nivel']);
+    }
+
+    public function test_puntos_de_venta_muestra_en_proceso_con_spinner_y_no_lo_cuenta_como_problema(): void
+    {
+        CodigoInstalacion::generarPara($this->caja, null)->update(['usado_at' => now()]);
+        $this->reportar($this->reporte(['ultima_sincronizacion_stock' => now()->subMinutes(30)->toIso8601String()]));
+        $this->descargandoStock([
+            'stock_descarga_iniciada_at' => now()->subMinutes(12),
+            'stock_descarga_avance_at' => now()->subMinute(),
+        ]);
+
+        $usuario = User::factory()->create();
+        $usuario->assignRole(tap(Role::findOrCreate('terminales-'.uniqid(), 'web'))->givePermissionTo('terminales.ver'));
+        $this->actingAs($usuario);
+
+        Livewire::test(Index::class)
+            ->assertSee('En proceso')
+            ->assertSee('Descargando stock desde hace 12 min')
+            ->assertSee('animate-spin', false)
+            ->assertDontSee('Con problemas')
+            ->assertDontSee('necesitan atención');
+    }
+
     public function test_las_antiguedades_se_miden_con_el_reloj_de_la_caja(): void
     {
         // Reloj de la caja 3 horas atrasado, pero el stock se bajó hace 1 minuto para ella.

@@ -88,6 +88,25 @@ class AuditoriaSincronizacionTest extends TestCase
         Livewire::test(Sincronizacion::class)->assertForbidden();
     }
 
+    public function test_una_caja_que_esta_bajando_stock_se_ve_en_proceso_y_se_cuenta_aparte(): void
+    {
+        $this->reportar(['ultima_sincronizacion_stock' => now()->subMinutes(30)->toIso8601String()]);
+        $this->caja->forceFill([
+            'stock_descarga_iniciada_at' => now()->subMinutes(12),
+            'stock_descarga_avance_at' => now()->subMinute(),
+        ])->save();
+
+        $this->actingAs($this->usuarioCon(['terminales.ver']));
+
+        Livewire::test(Sincronizacion::class)
+            ->assertSee('En proceso')
+            ->assertSee('Descargando stock desde hace 12 min')
+            ->assertSee('Actualizando…')
+            ->assertSee('animate-spin', false)
+            ->assertViewHas('cajasEnProceso', 1)
+            ->assertViewHas('cajasCriticas', 0);
+    }
+
     public function test_muestra_el_detalle_completo_de_una_caja_con_problemas(): void
     {
         $this->reportar([

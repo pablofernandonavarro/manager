@@ -115,6 +115,36 @@ class SyncIncrementalTest extends TestCase
         $this->assertSame(['ACTIVO' => true, 'NO-VENDIBLE' => false, 'BORRADO' => false], $conInactivos);
     }
 
+    public function test_la_descarga_de_stock_por_paginas_queda_registrada_en_la_caja(): void
+    {
+        foreach (['A', 'B'] as $codigo) {
+            StockSucursal::create(['sucursal_id' => $this->villaBosh->id, 'product_id' => $this->producto($codigo)->id, 'cantidad' => 5]);
+        }
+
+        // Una sola página (lo de todos los minutos): no escribe nada.
+        $this->pedir('/api/v1/sync/stock?limit=100');
+        $this->assertNull($this->caja->fresh()->stock_descarga_iniciada_at);
+
+        $primera = $this->pedir('/api/v1/sync/stock?limit=1');
+        $caja = $this->caja->fresh();
+        $this->assertNotNull($caja->stock_descarga_iniciada_at);
+        $this->assertNotNull($caja->stock_descarga_avance_at);
+        $this->assertNull($caja->stock_descarga_terminada_at);
+
+        $this->travel(2)->minutes();
+        $segunda = $this->pedir('/api/v1/sync/stock?limit=1&cursor='.$primera['next_cursor']);
+        $caja = $this->caja->fresh();
+        $this->assertTrue($caja->stock_descarga_avance_at->gt($caja->stock_descarga_iniciada_at));
+        $this->assertNull($caja->stock_descarga_terminada_at);
+
+        $this->pedir('/api/v1/sync/stock?limit=1&cursor='.$segunda['next_cursor']);
+        $this->assertNotNull($this->caja->fresh()->stock_descarga_terminada_at);
+
+        // Una descarga nueva reabre la marca.
+        $this->pedir('/api/v1/sync/stock?limit=1');
+        $this->assertNull($this->caja->fresh()->stock_descarga_terminada_at);
+    }
+
     public function test_stock_por_paginas_solo_de_la_sucursal_y_con_delta(): void
     {
         $otra = Sucursal::create(['nombre' => 'Centro']);
