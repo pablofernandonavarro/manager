@@ -194,6 +194,32 @@ class PromocionesYCierresTest extends TestCase
             ->assertSee('PDV04-000004');
     }
 
+    public function test_el_filtro_por_dia_de_cierres_usa_el_dia_argentino(): void
+    {
+        $this->actingAs($this->usuarioCon(['cajas.ver']));
+
+        $caja = PuntoDeVenta::create(['sucursal_id' => $this->villaBosh->id, 'nombre' => 'caja 2', 'secret' => Hash::make('x')]);
+
+        // Turno abierto a las 23:00 del 10/03 en Argentina = 02:00 UTC del 11/03.
+        $this->turno($caja, ['abierto_at' => '2025-03-11 02:00:00', 'cerrado_at' => '2025-03-11 06:00:00']);
+
+        $turnosListados = fn (string $dia) => count(Livewire::test(Cierres::class)
+            ->set('desde', $dia)
+            ->set('hasta', $dia)
+            ->viewData('turnos')
+            ->items());
+
+        $this->assertSame(1, $turnosListados('2025-03-10'));
+        $this->assertSame(0, $turnosListados('2025-03-11'));
+
+        $sinFiltroValido = Livewire::test(Cierres::class)
+            ->set('desde', 'no-es-una-fecha')
+            ->set('hasta', '2025-13-45')
+            ->viewData('turnos');
+
+        $this->assertCount(1, $sinFiltroValido->items());
+    }
+
     public function test_sin_permiso_no_se_ven_los_cierres(): void
     {
         $this->actingAs($this->usuarioCon(['promociones.gestionar']));

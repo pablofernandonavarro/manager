@@ -4,6 +4,7 @@ namespace App\Livewire\Ventas;
 
 use App\Models\DetalleVenta;
 use App\Models\Sucursal;
+use Carbon\Carbon;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -78,15 +79,30 @@ class PorArticulo extends Component
             $query->where('ventas.sucursal_id', $this->sucursalSeleccionada);
         }
 
-        if ($this->desde) {
-            $query->whereDate('ventas.fecha', '>=', $this->desde);
+        if ($desde = $this->diaLocalEnUtc($this->desde, false)) {
+            $query->where('ventas.fecha', '>=', $desde);
         }
 
-        if ($this->hasta) {
-            $query->whereDate('ventas.fecha', '<=', $this->hasta);
+        if ($hasta = $this->diaLocalEnUtc($this->hasta, true)) {
+            $query->where('ventas.fecha', '<=', $hasta);
         }
 
         return $query;
+    }
+
+    /**
+     * Convierte un día local (Y-m-d) al instante UTC con que se guardan las fechas, o null
+     * si el texto no es una fecha válida (viene de la URL y no se puede dar por bueno).
+     */
+    private function diaLocalEnUtc(?string $fecha, bool $finDelDia): ?Carbon
+    {
+        if (! $fecha || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha) || ! strtotime($fecha)) {
+            return null;
+        }
+
+        $dia = Carbon::parse($fecha, config('app.display_timezone'));
+
+        return ($finDelDia ? $dia->endOfDay() : $dia->startOfDay())->utc();
     }
 
     #[Layout('layouts.app')]

@@ -69,7 +69,7 @@ class VentasPorArticuloTest extends TestCase
     }
 
     /** @param array<int, array{0: Product, 1: int, 2: int}> $items */
-    private function crearVenta(PuntoDeVenta $pdv, string $numero, array $items): Venta
+    private function crearVenta(PuntoDeVenta $pdv, string $numero, array $items, ?string $fechaUtc = null): Venta
     {
         $total = collect($items)->sum(fn ($i) => $i[1] * $i[2]);
 
@@ -78,7 +78,7 @@ class VentasPorArticuloTest extends TestCase
             'punto_de_venta_id' => $pdv->id,
             'sucursal_id' => $pdv->sucursal_id,
             'numero_venta' => $numero,
-            'fecha' => now(),
+            'fecha' => $fechaUtc ?? now(),
             'subtotal' => $total,
             'descuento' => 0,
             'total' => $total,
@@ -150,6 +150,34 @@ class VentasPorArticuloTest extends TestCase
 
         $this->assertCount(1, $articulos->items());
         $this->assertSame('REM045', $articulos->first()->codigo_interno);
+    }
+
+    public function test_una_venta_de_la_noche_cae_en_su_dia_argentino(): void
+    {
+        $campera = Product::factory()->create(['nombre' => 'Campera Nocturna', 'codigo_interno' => 'CAM999']);
+
+        // 23:00 del 10/03 en Argentina = 02:00 UTC del 11/03.
+        $this->crearVenta(PuntoDeVenta::first(), 'PDV01-000099', [[$campera, 1, 90000]], '2025-03-11 02:00:00');
+
+        $codigos = fn (string $dia) => Livewire::test(PorArticulo::class)
+            ->set('desde', $dia)
+            ->set('hasta', $dia)
+            ->viewData('articulos')
+            ->pluck('codigo_interno')
+            ->all();
+
+        $this->assertSame(['CAM999'], $codigos('2025-03-10'));
+        $this->assertSame([], $codigos('2025-03-11'));
+    }
+
+    public function test_una_fecha_invalida_en_los_filtros_se_ignora(): void
+    {
+        $articulos = Livewire::test(PorArticulo::class)
+            ->set('desde', 'no-es-una-fecha')
+            ->set('hasta', '2025-13-45')
+            ->viewData('articulos');
+
+        $this->assertSame(2, $articulos->total());
     }
 
     public function test_la_pantalla_carga_y_muestra_el_articulo(): void

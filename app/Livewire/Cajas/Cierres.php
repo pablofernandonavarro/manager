@@ -5,6 +5,7 @@ namespace App\Livewire\Cajas;
 use App\Models\PuntoDeVenta;
 use App\Models\Sucursal;
 use App\Models\TurnoCaja;
+use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -67,15 +68,33 @@ class Cierres extends Component
         $this->detalleId = null;
     }
 
+    /**
+     * Convierte un día local (Y-m-d) al instante UTC con que se guardan las fechas, o null
+     * si el texto no es una fecha válida (viene de la URL y no se puede dar por bueno).
+     */
+    private function diaLocalEnUtc(?string $fecha, bool $finDelDia): ?Carbon
+    {
+        if (! $fecha || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha) || ! strtotime($fecha)) {
+            return null;
+        }
+
+        $dia = Carbon::parse($fecha, config('app.display_timezone'));
+
+        return ($finDelDia ? $dia->endOfDay() : $dia->startOfDay())->utc();
+    }
+
     #[Layout('layouts.app')]
     public function render(): mixed
     {
+        $desde = $this->diaLocalEnUtc($this->desde, false);
+        $hasta = $this->diaLocalEnUtc($this->hasta, true);
+
         $turnos = TurnoCaja::with(['sucursal', 'puntoDeVenta'])
             ->when($this->sucursal, fn ($q) => $q->where('sucursal_id', $this->sucursal))
             ->when($this->caja, fn ($q) => $q->where('punto_de_venta_id', $this->caja))
             ->when($this->estado, fn ($q) => $q->where('estado', $this->estado))
-            ->when($this->desde, fn ($q) => $q->whereDate('abierto_at', '>=', $this->desde))
-            ->when($this->hasta, fn ($q) => $q->whereDate('abierto_at', '<=', $this->hasta))
+            ->when($desde, fn ($q) => $q->where('abierto_at', '>=', $desde))
+            ->when($hasta, fn ($q) => $q->where('abierto_at', '<=', $hasta))
             ->orderByDesc('abierto_at')
             ->paginate(25);
 
