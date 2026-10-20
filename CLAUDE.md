@@ -298,11 +298,21 @@ npm run build
 
 Para diagnosticar si una clase falta: `Select-String -Path "public\build\assets\*.css" -Pattern "max-w-5xl"`.
 
+## Cómo trabajamos (acuerdos de las últimas sesiones)
+
+- **Son dos repos independientes**: el Manager (`C:\MisLaravel\manager`, se despliega con un push a `main`) y el POS (`C:\MisLaravel\pos`, se publica con un tag `escritorio-vX.Y.Z`). Al tocar el POS leer también su `CLAUDE.md`. Detalle y checklist en `docs/pos-integracion.md` y `docs/produccion-y-deploy.md`.
+- **Commits, push y deploy solo cuando el usuario los pide**, y por separado (hasta ahora dijo "commitea" y después "desplegá"). Un commit por tema; mensaje en español, `Fix:`/`Feat:`/`Perf:` + cuerpo que explica el porqué, y las líneas `Co-Authored-By` que indique el sistema. No commitear `.claude/settings.local.json`. Para partir un archivo que mezcla temas: `git diff -U0` filtrado por hunks + `git apply --cached --unidiff-zero` **en bytes** (los archivos tienen CRLF y el modo texto de Python los rompe).
+- **Tests**: correr los del área y avisar; la suite completa solo si se pide (el CI la corre al desplegar). Un test nuevo de un bug tiene que **fallar sin el arreglo**: verificarlo con `git stash` de los archivos de `app/`.
+- **En modo auto el clasificador de permisos bloquea** el push/tag de producción del POS y leer `.env.escritorio` (tiene claves). No buscar rodeos: pedirle al usuario que lo corra con `! comando`. El push del Manager sí se permitió.
+- **Pint** en el POS reformatea archivos que nunca lo usaron (ej. `Pos/Stock.php`): mirar `git diff --stat` y revertir el ruido para dejar solo el cambio.
+- **Livewire**: `Livewire::test` no ejecuta JavaScript (un `assertSeeHtml` solo prueba que el atributo está). Llamar a la API con un token deja al `PuntoDeVenta` como usuario autenticado del test: autenticar al usuario **después**.
+- **Herramientas en Windows**: los heredocs largos con comillas y `$` se cortan en Git Bash; escribir el script con la herramienta de archivos y ejecutarlo. La caja de esta PC se puede consultar en solo lectura y el servidor por `ssh pos-manager` (ver *Diagnosticar una caja*).
+
 ## Documentación por dominio
 
 Estos temas viven en `docs/` para no inflar este archivo. Leelos cuando estés trabajando en ese dominio puntual:
 
-- **POS: instalación, versión, comandos, actualización y sync** → `docs/pos-integracion.md` (código de instalación, versión/conexión de cada caja, salud de las cajas, instalador descargable, permisos sobre terminales, canal de órdenes, actualización del código de las cajas, contrato de sync)
+- **POS: instalación, versión, comandos, actualización y sync** → `docs/pos-integracion.md` (código de instalación, versión/conexión de cada caja, salud de las cajas, **cómo diagnosticar una caja y publicar una versión del POS**, instalador descargable, permisos sobre terminales, canal de órdenes, actualización del código de las cajas, contrato de sync)
 - **Facturación electrónica (AFIP)** → `docs/facturacion-afip.md` (configuración del emisor, certificado, WSAA/WSFEv1, emisión de comprobantes)
 - **Caja, cobro, promociones y cuenta corriente** → `docs/ventas-y-caja.md` (promociones bancarias, ventas con pagos, turnos de caja, cajeros, clientes y cuenta corriente)
 - **Dashboard y reportes de ventas** → `docs/reportes-y-dashboard.md`
