@@ -13,7 +13,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Auditoría de sincronización</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Auditoría de sincronización</h1>
             <p class="mt-2 text-sm text-gray-700">Estado en vivo de cada caja: qué le falta enviar, hace cuánto sincronizó y si necesita atención.</p>
         </div>
     </div>

@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Stock de Productos</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Stock de Productos</h1>
             <p class="mt-2 text-sm text-gray-700">Stock total consolidado de todas las sucursales</p>
         </div>
     </div>
@@ -48,13 +48,13 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stock total</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sucursales</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Crítico</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Código</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Producto</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Stock total</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Sucursales</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Crítico</th>
                         <th class="px-6 py-3"></th>
                     </tr>
                 </thead>
@@ -90,7 +90,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                            <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500 italic">
                                 No se encontraron productos
                             </td>
                         </tr>
@@ -116,7 +116,7 @@
                             {{ $detalleProductoNombre }}
                         </p>
                     </div>
-                    <button wire:click="cerrarDetalle" class="text-gray-400 hover:text-gray-600">
+                    <button wire:click="cerrarDetalle" class="text-gray-500 hover:text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -139,7 +139,7 @@
                             </span>
                         </div>
                     @empty
-                        <p class="py-4 text-center text-sm text-gray-400">Sin stock en ninguna sucursal</p>
+                        <p class="py-4 text-center text-sm text-gray-500">Sin stock en ninguna sucursal</p>
                     @endforelse
 
                     @if($remitosEnTransito->isNotEmpty())

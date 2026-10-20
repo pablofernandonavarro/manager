@@ -3,7 +3,7 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Ajuste de Inventario</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Ajuste de Inventario</h1>
             <p class="text-sm text-gray-500 mt-1">El stock se ajusta por sucursal y el total global se actualiza automáticamente.</p>
         </div>
         <div class="flex items-center gap-3">
@@ -21,13 +21,13 @@
     {{-- Mensajes flash --}}
     @if(session('success'))
         <div class="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
-            <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
             {{ session('success') }}
         </div>
     @endif
     @if(session('info'))
         <div class="flex items-center gap-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm">
-            <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
             {{ session('info') }}
         </div>
     @endif
@@ -84,7 +84,7 @@
 
             {{-- Tabla de productos --}}
             @if($productos->isEmpty())
-                <div class="text-center py-12 text-gray-400 text-sm">
+                <div class="text-center py-12 text-gray-500 text-sm">
                     @if($busqueda)
                         No se encontraron productos para "{{ $busqueda }}".
                     @else
@@ -94,13 +94,13 @@
             @else
                 <div class="overflow-x-auto rounded-lg border border-gray-200">
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead class="bg-gray-50">
+                        <thead class="border-b border-gray-200">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Código</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Producto</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock actual</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Nueva cantidad</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Diferencia</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Código</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Producto</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500">Stock actual</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500">Nueva cantidad</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500">Diferencia</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
@@ -127,7 +127,7 @@
                                         @elseif($delta < 0)
                                             <span class="text-red-600">{{ $delta }}</span>
                                         @else
-                                            <span class="text-gray-400">—</span>
+                                            <span class="text-gray-500">—</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -139,7 +139,7 @@
 
             {{-- Acciones --}}
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-gray-100">
-                <p class="text-xs text-gray-400">
+                <p class="text-xs text-gray-500">
                     Las filas en amarillo tienen cantidades modificadas. Los cambios fluyen hacia el stock global (central).
                 </p>
                 <div class="flex items-center gap-2">
@@ -171,7 +171,7 @@
 
             {{-- Descargar plantilla --}}
             <div class="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <svg class="w-8 h-8 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
                 <div class="flex-1">
@@ -179,7 +179,7 @@
                     <p class="text-xs text-gray-500">Descargá la planilla con los productos y el stock actual de la sucursal seleccionada. Completá la columna <strong>nueva_cantidad</strong> y subila.</p>
                 </div>
                 <a href="{{ route('sucursales.ajuste-stock.plantilla', ['sucursal_id' => $sucursalId]) }}"
-                   class="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">
+                   class="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
                     Descargar plantilla
                 </a>
             </div>
@@ -209,19 +209,19 @@
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
                         <h3 class="text-sm font-semibold text-gray-900">Vista previa — {{ count($previsualizacion) }} producto(s)</h3>
-                        <button wire:click="resetImportacion" class="text-xs text-gray-400 hover:text-gray-600 underline">
+                        <button wire:click="resetImportacion" class="text-xs text-gray-500 hover:text-gray-600 underline">
                             Cancelar
                         </button>
                     </div>
                     <div class="overflow-x-auto rounded-lg border border-gray-200">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead class="bg-gray-50">
+                            <thead class="border-b border-gray-200">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Código</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Producto</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Stock actual</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Nueva cantidad</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Diferencia</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Código</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">Producto</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500">Stock actual</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500">Nueva cantidad</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500">Diferencia</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-100">
@@ -237,7 +237,7 @@
                                             @elseif($fila['delta'] < 0)
                                                 <span class="text-red-700">{{ $fila['delta'] }}</span>
                                             @else
-                                                <span class="text-gray-400">0</span>
+                                                <span class="text-gray-500">0</span>
                                             @endif
                                         </td>
                                     </tr>

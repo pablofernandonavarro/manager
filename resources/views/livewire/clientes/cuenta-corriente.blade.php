@@ -10,7 +10,7 @@
     <div class="sm:flex sm:items-end sm:justify-between">
         <div>
             <a href="{{ route('clientes.index') }}" class="text-sm text-blue-600 hover:text-blue-800">← Clientes</a>
-            <h1 class="mt-1 text-3xl font-bold text-gray-900">{{ $cliente->nombre }}</h1>
+            <h1 class="mt-1 text-2xl font-semibold tracking-tight text-gray-900">{{ $cliente->nombre }}</h1>
             <p class="mt-1 text-sm text-gray-600">
                 {{ $cliente->documentoFormateado() ?? 'Sin documento' }} · {{ Comprobante::CONDICIONES_IVA[$cliente->condicion_iva] ?? '' }}
                 @if($cliente->telefono) · {{ $cliente->telefono }} @endif
@@ -66,14 +66,14 @@
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Movimiento</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origen</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Debe</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Haber</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Fecha</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Movimiento</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Origen</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Debe</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Haber</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Saldo</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -90,7 +90,7 @@
                         <td class="px-6 py-3 text-right text-sm font-semibold text-gray-900">{{ $pesos($saldos[$m->id]) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">Sin movimientos.</td></tr>
+                    <tr><td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">Sin movimientos.</td></tr>
                 @endforelse
             </tbody>
         </table>

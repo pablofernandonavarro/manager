@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Gestión de Productos</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Gestión de Productos</h1>
             <p class="mt-2 text-sm text-gray-700">Administra el catálogo de productos del sistema</p>
         </div>
         <div class="mt-4 sm:mt-0 flex flex-wrap gap-2">
@@ -44,7 +44,7 @@
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Buscar producto</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
                     </div>
@@ -87,14 +87,14 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Código</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Producto</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Tipo</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Stock</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
-                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Código</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Producto</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Tipo</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Stock</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Estado</th>
+                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -126,7 +126,7 @@
                             </td>
                             <td class="px-6 py-4 align-middle">
                                 <div class="flex items-center gap-3">
-                                    <div class="flex-shrink-0 h-16 w-16 border border-gray-300 bg-white p-0.5">
+                                    <div class="shrink-0 h-16 w-16 border border-gray-300 bg-white p-0.5">
                                         @php
                                             $effectiveImage = $product->effectiveBaseImage();
                                             $thumbSrc = $product->imagen
@@ -149,7 +149,7 @@
                                         <div class="flex items-center gap-2 mb-1">
                                             <div class="text-sm font-medium text-gray-900">{{ $product->nombre }}</div>
                                             @if($product->trashed())
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 flex-shrink-0">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 shrink-0">
                                                     Eliminado
                                                 </span>
                                             @endif
@@ -199,7 +199,7 @@
                                         <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {{ $product->estado ? 'translate-x-6' : 'translate-x-1' }}"></span>
                                     </button>
                                 @else
-                                    <span class="text-sm text-gray-400">-</span>
+                                    <span class="text-sm text-gray-500">-</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

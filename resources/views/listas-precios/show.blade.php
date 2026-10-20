@@ -19,7 +19,7 @@
                             </svg>
                         </a>
                         <div>
-                            <h1 class="text-2xl font-bold text-gray-800">{{ $lista->nombre }}</h1>
+                            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">{{ $lista->nombre }}</h1>
                             <p class="text-sm text-gray-600">Factor: {{ number_format($lista->factor, 2) }}x • {{ $productos->count() }} productos</p>
                         </div>
                     </div>
@@ -46,12 +46,12 @@
             <table class="w-full text-sm border-collapse">
                 <thead class="bg-gray-100 sticky top-0 z-10 border-b-2 border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-24">Código</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">Producto</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-32">Precio Base</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-32">Precio Lista</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-28">Diferencia</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider w-24">% Margen</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 border-r border-gray-300 w-24">Código</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 border-r border-gray-300">Producto</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-32">Precio Base</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-32">Precio Lista</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-28">Diferencia</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 w-24">% Margen</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">

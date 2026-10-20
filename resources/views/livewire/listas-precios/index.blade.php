@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Listas de Precios</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Listas de Precios</h1>
             <p class="mt-2 text-sm text-gray-700">El <strong>factor</strong> multiplica el precio base del producto. Factor 1 = precio público. Factor 0.7 = 30% de descuento.</p>
         </div>
     </div>
@@ -27,7 +27,7 @@
                        class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('factor') border-red-300 @enderror">
             </div>
             <button type="button" wire:click="save"
-                    class="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">
+                    class="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
                 + Agregar
             </button>
         </div>
@@ -38,15 +38,15 @@
     <!-- Listado -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Factor ×</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Precio $1000</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Overrides</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Activo</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Nombre</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Descripción</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Factor ×</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Precio $1000</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Overrides</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 w-20">Activo</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Acciones</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -61,7 +61,7 @@
                                        class="w-full px-2 py-1 border border-blue-400 rounded text-sm focus:ring-2 focus:ring-blue-500">
                                 @error('editingNombre') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                             @else
-                                <span class="text-sm font-medium text-gray-900 {{ !$lista->activo ? 'line-through text-gray-400' : '' }}">
+                                <span class="text-sm font-medium text-gray-900 {{ !$lista->activo ? 'line-through text-gray-500' : '' }}">
                                     {{ $lista->nombre }}
                                 </span>
                             @endif
@@ -120,28 +120,28 @@
                             @else
                                 <div class="flex items-center justify-end gap-1">
                                     <a href="{{ route('listas-precios.show', $lista) }}"
-                                       class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                       class="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                                        title="Ver productos y precios">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                         </svg>
                                     </a>
                                     <a href="/listas-precios/{{ $lista->id }}/editar"
-                                       class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                       class="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                        title="Overrides de precios">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                                         </svg>
                                     </a>
                                     <button type="button" wire:click="startEdit({{ $lista->id }})"
-                                            class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                            class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                         </svg>
                                     </button>
                                     <button type="button" wire:click="delete({{ $lista->id }})"
                                             wire:confirm="¿Eliminar la lista '{{ $lista->nombre }}'?"
-                                            class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                            class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
@@ -152,7 +152,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                        <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500 italic">
                             No hay listas de precios creadas todavía
                         </td>
                     </tr>

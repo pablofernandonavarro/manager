@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Configuración de Productos</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Configuración de Productos</h1>
             <p class="mt-2 text-sm text-gray-700">Configura las opciones generales para la creación y gestión de productos</p>
         </div>
     </div>

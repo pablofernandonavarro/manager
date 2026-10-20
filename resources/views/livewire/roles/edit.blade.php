@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Editar Rol</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Editar Rol</h1>
             <p class="mt-2 text-sm text-gray-700">Modifica el rol <span class="font-semibold text-gray-900">{{ ucfirst($role->name) }}</span> y sus permisos</p>
         </div>
         <div class="mt-4 sm:mt-0">

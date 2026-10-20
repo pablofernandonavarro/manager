@@ -6,7 +6,7 @@
 
 <div class="space-y-6">
     <div>
-        <h1 class="text-3xl font-bold text-gray-900">Cierres de caja</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Cierres de caja</h1>
         <p class="mt-2 text-sm text-gray-700">Turnos de todas las cajas: los abiertos en vivo y los cerrados con su cierre Z y arqueo</p>
     </div>
 
@@ -52,14 +52,14 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Caja</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Turno</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cajero</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Apertura / cierre</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ventas</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Diferencia</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Caja</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Turno</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Cajero</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Apertura / cierre</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Ventas</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Diferencia</th>
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
@@ -89,7 +89,7 @@
                             </td>
                             <td class="px-4 py-3 text-right text-sm font-semibold">
                                 @if($t->diferencia === null)
-                                    <span class="text-gray-400">—</span>
+                                    <span class="text-gray-500">—</span>
                                 @elseif((float) $t->diferencia == 0)
                                     <span class="text-green-700">Sin diferencia</span>
                                 @else
@@ -103,7 +103,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-6 py-12 text-center text-sm text-gray-400">No hay turnos con estos filtros.</td></tr>
+                        <tr><td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500">No hay turnos con estos filtros.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -125,7 +125,7 @@
                         </h3>
                         <p class="text-sm text-gray-500">{{ $detalle->sucursal?->nombre }} · {{ $detalle->cajero }}</p>
                     </div>
-                    <button type="button" wire:click="cerrarDetalle" class="text-gray-400 hover:text-gray-600">
+                    <button type="button" wire:click="cerrarDetalle" class="text-gray-500 hover:text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -159,7 +159,7 @@
                                     <td class="py-1.5 text-right font-medium text-gray-900">{{ $pesos($importe) }}</td>
                                 </tr>
                             @empty
-                                <tr><td class="py-1.5 text-gray-400">Sin ventas</td></tr>
+                                <tr><td class="py-1.5 text-gray-500">Sin ventas</td></tr>
                             @endforelse
                         </table>
                     </div>
@@ -170,7 +170,7 @@
                             <table class="w-full">
                                 @foreach($r['promociones'] as $promo)
                                     <tr class="border-b border-gray-100">
-                                        <td class="py-1.5 text-gray-700">{{ $promo['nombre'] }} <span class="text-xs text-gray-400">×{{ $promo['cantidad'] }}</span></td>
+                                        <td class="py-1.5 text-gray-700">{{ $promo['nombre'] }} <span class="text-xs text-gray-500">×{{ $promo['cantidad'] }}</span></td>
                                         <td class="py-1.5 text-right text-gray-900">−{{ $pesos($promo['descuento']) }}</td>
                                     </tr>
                                 @endforeach

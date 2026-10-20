@@ -2,7 +2,7 @@
     <!-- Header Section -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Gestión de Usuarios</h1>
             <p class="mt-2 text-sm text-gray-700">Administra los usuarios y permisos del sistema</p>
         </div>
         <div class="mt-4 sm:mt-0">
@@ -20,7 +20,7 @@
     @if (session()->has('success'))
         <div class="rounded-lg bg-green-50 p-4 border-l-4 border-green-400">
             <div class="flex">
-                <div class="flex-shrink-0">
+                <div class="shrink-0">
                     <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                     </svg>
@@ -35,7 +35,7 @@
     @if (session()->has('error'))
         <div class="rounded-lg bg-red-50 p-4 border-l-4 border-red-400">
             <div class="flex">
-                <div class="flex-shrink-0">
+                <div class="shrink-0">
                     <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                     </svg>
@@ -55,7 +55,7 @@
                     <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Buscar usuario</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
                         </div>
@@ -86,13 +86,13 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Usuario</th>
-                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rol</th>
-                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha Registro</th>
-                        <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Usuario</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Rol</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Estado</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Fecha Registro</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-gray-600">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -100,7 +100,7 @@
                         <tr class="hover:bg-gray-50 transition-colors duration-150 {{ $user->trashed() ? 'bg-red-50/50' : '' }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-11 w-11">
+                                    <div class="shrink-0 h-11 w-11">
                                         <div class="h-11 w-11 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-md">
                                             <span class="text-white font-semibold text-sm">{{ strtoupper(substr($user->name, 0, 2)) }}</span>
                                         </div>
@@ -131,7 +131,7 @@
                                         {{ ucfirst($user->roles->first()->name) }}
                                     </span>
                                 @else
-                                    <span class="text-sm text-gray-400 italic">Sin rol</span>
+                                    <span class="text-sm text-gray-500 italic">Sin rol</span>
                                 @endif
                                 @if($user->rolDeCaja())
                                     <div class="mt-1 text-xs text-gray-500">
@@ -153,7 +153,7 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                 <div class="flex items-center">
-                                    <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                     </svg>
                                     {{ $user->created_at->timezone(config('app.display_timezone'))->format('d/m/Y') }}

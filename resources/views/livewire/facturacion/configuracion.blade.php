@@ -8,7 +8,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-start sm:justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Facturación electrónica</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Facturación electrónica</h1>
             <p class="mt-2 text-sm text-gray-700">Datos del emisor, certificado digital de AFIP y punto de venta de cada sucursal. Las cajas le piden el CAE a este Manager.</p>
         </div>
         <div class="mt-4 sm:mt-0 flex items-center gap-3">
@@ -183,7 +183,7 @@
             <tbody class="divide-y divide-gray-100">
                 @foreach($sucursales as $s)
                     <tr wire:key="pv-{{ $s->id }}">
-                        <td class="py-2 {{ $s->activo ? 'text-gray-900' : 'text-gray-400' }}">{{ $s->nombre }}</td>
+                        <td class="py-2 {{ $s->activo ? 'text-gray-900' : 'text-gray-500' }}">{{ $s->nombre }}</td>
                         <td class="py-2">
                             <input type="number" min="1" max="99998" wire:model="puntosVenta.{{ $s->id }}" placeholder="Sin facturación"
                                    class="w-40 px-3 py-1.5 border border-gray-300 rounded-lg text-sm">

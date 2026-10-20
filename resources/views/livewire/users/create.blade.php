@@ -10,7 +10,7 @@
 
     <!-- Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Crear Nuevo Usuario</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Crear Nuevo Usuario</h1>
         <p class="mt-2 text-sm text-gray-600">Completa la información para registrar un nuevo usuario en el sistema</p>
     </div>
 
@@ -52,11 +52,11 @@
                 <!-- Email -->
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-                        Correo electrónico @if($role !== 'cajero')<span class="text-red-500">*</span>@else<span class="text-xs text-gray-400">(opcional para cajeros)</span>@endif
+                        Correo electrónico @if($role !== 'cajero')<span class="text-red-500">*</span>@else<span class="text-xs text-gray-500">(opcional para cajeros)</span>@endif
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
                             </svg>
                         </div>
@@ -81,11 +81,11 @@
                 <!-- Contraseña -->
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                        Contraseña @if($role !== 'cajero')<span class="text-red-500">*</span>@else<span class="text-xs text-gray-400">(opcional para cajeros)</span>@endif
+                        Contraseña @if($role !== 'cajero')<span class="text-red-500">*</span>@else<span class="text-xs text-gray-500">(opcional para cajeros)</span>@endif
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                             </svg>
                         </div>

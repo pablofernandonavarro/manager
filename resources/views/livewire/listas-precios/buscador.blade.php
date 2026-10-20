@@ -10,7 +10,7 @@
                         </svg>
                     </a>
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-800">{{ $lista->nombre }}</h1>
+                        <h1 class="text-2xl font-semibold tracking-tight text-gray-900">{{ $lista->nombre }}</h1>
                         <p class="text-sm text-gray-600">Buscador de Precios • Factor: {{ number_format($lista->factor, 2) }}x</p>
                     </div>
                 </div>
@@ -27,7 +27,7 @@
                         class="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         autofocus
                     >
-                    <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                 </div>
@@ -64,13 +64,13 @@
         <table class="w-full text-sm border-collapse bg-white">
             <thead class="bg-gray-100 sticky top-0 z-10 border-b-2 border-gray-300">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-28">Código</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">Producto</th>
-                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-24">Stock</th>
-                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-32">Precio Base</th>
-                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-32 bg-blue-50">Precio Lista</th>
-                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-28">Diferencia</th>
-                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider w-24">% Margen</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 border-r border-gray-300 w-28">Código</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 border-r border-gray-300">Producto</th>
+                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-24">Stock</th>
+                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-32">Precio Base</th>
+                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-32 bg-blue-50">Precio Lista</th>
+                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-28">Diferencia</th>
+                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 w-24">% Margen</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -101,7 +101,7 @@
                 @empty
                     <tr>
                         <td colspan="7" class="px-4 py-12 text-center">
-                            <div class="text-gray-400">
+                            <div class="text-gray-500">
                                 <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                 </svg>

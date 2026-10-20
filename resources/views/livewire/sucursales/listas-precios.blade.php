@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Listas de Precios por Sucursal</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Listas de Precios por Sucursal</h1>
             <p class="mt-2 text-sm text-gray-700">Asigná qué listas de precios están disponibles en cada sucursal</p>
         </div>
     </div>
@@ -11,15 +11,15 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 sticky left-0 bg-gray-50 z-10">
                             Sucursal
                         </th>
                         @foreach($listasPrecios as $lista)
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 whitespace-nowrap">
                                 {{ $lista['nombre'] }}
-                                <span class="block text-xs text-gray-400 normal-case mt-0.5">Factor: {{ $lista['factor'] }}</span>
+                                <span class="block text-xs text-gray-500 normal-case mt-0.5">Factor: {{ $lista['factor'] }}</span>
                             </th>
                         @endforeach
                     </tr>
@@ -71,7 +71,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ count($listasPrecios) + 1 }}" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                            <td colspan="{{ count($listasPrecios) + 1 }}" class="px-6 py-10 text-center text-sm text-gray-500 italic">
                                 No hay sucursales activas
                             </td>
                         </tr>
@@ -84,7 +84,7 @@
     <!-- Leyenda -->
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div class="flex">
-            <svg class="w-5 h-5 text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-blue-400 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <div class="text-sm text-blue-700">

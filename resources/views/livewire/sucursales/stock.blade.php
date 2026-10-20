@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Stock por Sucursal</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Stock por Sucursal</h1>
             <p class="mt-2 text-sm text-gray-700">Visualizá el stock disponible en cada sucursal</p>
         </div>
     </div>
@@ -48,7 +48,7 @@
         @if($puedeEnviar)
             <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg px-4 py-2.5">
                 <span class="flex items-center gap-2">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                     </svg>
                     <span><strong>Enviar</strong> manda un artículo desde {{ $sucursalActual?->nombre }} a otras sucursales.</span>
@@ -62,16 +62,16 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Stock Sucursal</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Stock Global</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Marca</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Línea</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Producto</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Código</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Stock Sucursal</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Stock Global</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Marca</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Línea</th>
                         @if($puedeEnviar)
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Remito</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Remito</th>
                         @endif
                     </tr>
                 </thead>
@@ -109,21 +109,21 @@
                                 <td class="px-6 py-4 text-center">
                                     @if($producto->stock_sucursal > 0)
                                         <button type="button" wire:click="abrirRemito({{ $producto->id }})"
-                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                                             </svg>
                                             Enviar
                                         </button>
                                     @else
-                                        <span class="text-xs text-gray-400">—</span>
+                                        <span class="text-xs text-gray-500">—</span>
                                     @endif
                                 </td>
                             @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $puedeEnviar ? 7 : 6 }}" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                            <td colspan="{{ $puedeEnviar ? 7 : 6 }}" class="px-6 py-10 text-center text-sm text-gray-500 italic">
                                 No se encontraron productos
                             </td>
                         </tr>
@@ -144,7 +144,7 @@
                         <h3 class="text-base font-semibold text-gray-900">Desglose por sucursal</h3>
                         <p class="text-sm text-gray-500 mt-0.5">{{ $detalleProductoNombre }}</p>
                     </div>
-                    <button wire:click="cerrarDetalle" class="text-gray-400 hover:text-gray-600">
+                    <button wire:click="cerrarDetalle" class="text-gray-500 hover:text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -162,7 +162,7 @@
                             </span>
                         </div>
                     @empty
-                        <p class="py-4 text-center text-sm text-gray-400">Sin stock en ninguna sucursal</p>
+                        <p class="py-4 text-center text-sm text-gray-500">Sin stock en ninguna sucursal</p>
                     @endforelse
 
                     @if($remitosEnTransito->isNotEmpty())
@@ -212,7 +212,7 @@
                         <h3 class="text-base font-semibold text-gray-900">Crear remito</h3>
                         <p class="text-sm text-gray-500 mt-0.5 truncate max-w-sm">{{ $remitoProductoNombre }}</p>
                     </div>
-                    <button wire:click="cerrarRemito" class="text-gray-400 hover:text-gray-600">
+                    <button wire:click="cerrarRemito" class="text-gray-500 hover:text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -230,10 +230,10 @@
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b-2 border-gray-200">
-                                <th class="pb-2 text-left font-semibold text-gray-600 text-xs uppercase">Sucursal</th>
-                                <th class="pb-2 text-center font-semibold text-gray-600 text-xs uppercase w-24">Stock actual</th>
-                                <th class="pb-2 text-center font-semibold text-yellow-600 text-xs uppercase w-24">En tránsito</th>
-                                <th class="pb-2 text-center font-semibold text-gray-600 text-xs uppercase w-32">Cantidad a enviar</th>
+                                <th class="pb-2 text-left font-semibold text-gray-600 text-xs">Sucursal</th>
+                                <th class="pb-2 text-center font-semibold text-gray-600 text-xs w-24">Stock actual</th>
+                                <th class="pb-2 text-center font-semibold text-yellow-600 text-xs w-24">En tránsito</th>
+                                <th class="pb-2 text-center font-semibold text-gray-600 text-xs w-32">Cantidad a enviar</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -241,7 +241,7 @@
                                 <tr>
                                     <td class="py-2.5 text-gray-800 font-medium">{{ $suc->nombre }}{{ $suc->isCentral() ? ' (Central)' : '' }}</td>
                                     <td class="py-2.5 text-center">
-                                        <span class="text-sm {{ ($stockPorSucursal[$suc->id] ?? 0) > 0 ? 'text-green-700 font-semibold' : 'text-gray-400' }}">
+                                        <span class="text-sm {{ ($stockPorSucursal[$suc->id] ?? 0) > 0 ? 'text-green-700 font-semibold' : 'text-gray-500' }}">
                                             {{ number_format($stockPorSucursal[$suc->id] ?? 0) }}
                                         </span>
                                     </td>
@@ -280,7 +280,7 @@
 
                 @if($remitoError)
                     <div class="mx-6 mb-4 flex items-center gap-2 text-sm text-red-700 bg-red-50 rounded-lg px-4 py-3">
-                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         {{ $remitoError }}
                     </div>
                 @endif

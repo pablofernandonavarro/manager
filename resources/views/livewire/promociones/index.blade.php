@@ -6,7 +6,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Promociones bancarias</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Promociones bancarias</h1>
             <p class="mt-2 text-sm text-gray-700">Descuentos, reintegros y cuotas sin interés que las cajas aplican al cobrar con tarjeta o QR</p>
         </div>
         <button type="button" wire:click="crear"
@@ -25,13 +25,13 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Promoción</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aplica a</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beneficio</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cuándo</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Activa</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Promoción</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Aplica a</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Beneficio</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Cuándo</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Activa</th>
                         <th class="px-6 py-3"></th>
                     </tr>
                 </thead>
@@ -92,7 +92,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
+                            <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">
                                 Todavía no hay promociones. Creá la primera con «Nueva promoción».
                             </td>
                         </tr>
@@ -108,7 +108,7 @@
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl" @click.stop>
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <h3 class="text-base font-semibold text-gray-900">{{ $editandoId ? 'Editar promoción' : 'Nueva promoción' }}</h3>
-                    <button type="button" wire:click="cerrarModal" class="text-gray-400 hover:text-gray-600">
+                    <button type="button" wire:click="cerrarModal" class="text-gray-500 hover:text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -142,7 +142,7 @@
                             @error('medios') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <p class="text-sm font-medium text-gray-700 mb-1">Tarjetas <span class="text-xs text-gray-400">(ninguna = todas)</span></p>
+                            <p class="text-sm font-medium text-gray-700 mb-1">Tarjetas <span class="text-xs text-gray-500">(ninguna = todas)</span></p>
                             <div class="flex flex-wrap gap-3">
                                 @foreach(PromocionBancaria::TARJETAS as $valor => $etiqueta)
                                     <label class="inline-flex items-center gap-1.5 text-sm text-gray-700">
@@ -200,7 +200,7 @@
 
                     <div class="grid sm:grid-cols-2 gap-4">
                         <div>
-                            <p class="text-sm font-medium text-gray-700 mb-1">Días <span class="text-xs text-gray-400">(ninguno = todos)</span></p>
+                            <p class="text-sm font-medium text-gray-700 mb-1">Días <span class="text-xs text-gray-500">(ninguno = todos)</span></p>
                             <div class="flex flex-wrap gap-2">
                                 @foreach(PromocionBancaria::DIAS as $valor => $etiqueta)
                                     <label class="inline-flex items-center gap-1 text-sm text-gray-700">
@@ -223,7 +223,7 @@
                     </div>
 
                     <div>
-                        <p class="text-sm font-medium text-gray-700 mb-1">Sucursales <span class="text-xs text-gray-400">(ninguna = todas)</span></p>
+                        <p class="text-sm font-medium text-gray-700 mb-1">Sucursales <span class="text-xs text-gray-500">(ninguna = todas)</span></p>
                         <div class="flex flex-wrap gap-3">
                             @foreach($listaSucursales as $s)
                                 <label class="inline-flex items-center gap-1.5 text-sm text-gray-700">

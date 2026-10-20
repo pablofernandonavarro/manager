@@ -6,7 +6,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Clientes</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Clientes</h1>
             <p class="mt-2 text-sm text-gray-700">Datos para facturar y cuenta corriente. Las cajas los reciben con el saldo para vender a cuenta y cobrar sin conexión.</p>
         </div>
         <button type="button" wire:click="crear"
@@ -32,12 +32,12 @@
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condición IVA</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cuenta corriente</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Cliente</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Documento</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Condición IVA</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Cuenta corriente</th>
                     <th class="px-6 py-3"></th>
                 </tr>
             </thead>
@@ -45,7 +45,7 @@
                 @forelse($clientes as $c)
                     <tr wire:key="cliente-{{ $c->id }}" class="hover:bg-gray-50">
                         <td class="px-6 py-4">
-                            <div class="text-sm font-medium {{ $c->activo ? 'text-gray-900' : 'text-gray-400 line-through' }}">{{ $c->nombre }}</div>
+                            <div class="text-sm font-medium {{ $c->activo ? 'text-gray-900' : 'text-gray-500 line-through' }}">{{ $c->nombre }}</div>
                             <div class="text-xs text-gray-500">{{ collect([$c->telefono, $c->email])->filter()->implode(' · ') }}</div>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-700 font-mono">{{ $c->documentoFormateado() ?? '—' }}</td>
@@ -57,7 +57,7 @@
                                     {{ $c->cuenta_corriente ? ($c->limite_credito !== null ? 'Límite '.$pesos($c->limite_credito) : 'Sin límite') : 'Deshabilitada' }}
                                 </div>
                             @else
-                                <span class="text-xs text-gray-400">No</span>
+                                <span class="text-xs text-gray-500">No</span>
                             @endif
                         </td>
                         <td class="px-6 py-4 text-right whitespace-nowrap">
@@ -66,7 +66,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="px-6 py-12 text-center text-sm text-gray-400">No hay clientes con estos filtros.</td></tr>
+                    <tr><td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">No hay clientes con estos filtros.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -122,7 +122,7 @@
                         </label>
                         @if($cuentaCorriente)
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Límite de crédito <span class="text-xs text-gray-400">(vacío = sin límite)</span></label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Límite de crédito <span class="text-xs text-gray-500">(vacío = sin límite)</span></label>
                                 <input type="number" step="0.01" min="0" wire:model="limiteCredito" class="w-48 px-3 py-2 border border-gray-300 rounded-lg text-sm">
                                 @error('limiteCredito') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>

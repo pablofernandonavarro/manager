@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Editar Producto</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Editar Producto</h1>
             <p class="mt-2 text-sm text-gray-700">Modifica el producto <span class="font-semibold">{{ $product->nombre }}</span></p>
         </div>
         <div class="mt-4 sm:mt-0">
@@ -251,7 +251,7 @@
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-4">
                                             <!-- Variant Image -->
-                                            <div class="flex-shrink-0 h-16 w-16 border border-gray-300 bg-white p-1 rounded">
+                                            <div class="shrink-0 h-16 w-16 border border-gray-300 bg-white p-1 rounded">
                                                 @if($variant->imagen)
                                                     <img src="{{ asset('storage/' . $variant->imagen) }}"
                                                          alt="{{ $variant->nombre }}"
@@ -374,9 +374,9 @@
                             <thead class="bg-gray-100">
                                 <tr>
                                     @foreach($variantAttributes as $attrType)
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ $attrType->nombre }}</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">{{ $attrType->nombre }}</th>
                                     @endforeach
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Stock</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -724,7 +724,7 @@
                         $parentImages = $product->parent?->images ?? collect();
                     @endphp
                     <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-                        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                         <div class="text-sm text-blue-800">
@@ -753,7 +753,7 @@
                                 @if($image->is_base || $product->images->count() === 1)
                                     <!-- Badge PORTADA -->
                                     <div class="absolute bottom-0 left-0 right-0 bg-green-600 text-white text-center py-0.5">
-                                        <span class="text-[10px] font-semibold uppercase">Portada</span>
+                                        <span class="text-[11px] font-semibold uppercase">Portada</span>
                                     </div>
                                 @endif
 
@@ -814,7 +814,7 @@
                             <div class="border border-gray-200 rounded-lg p-4 bg-gray-50" wire:key="advanced-{{ $image->id }}">
                                 <div class="flex gap-4">
                                     <!-- Miniatura -->
-                                    <div class="flex-shrink-0 w-20 h-20 border border-gray-300 rounded overflow-hidden bg-white">
+                                    <div class="shrink-0 w-20 h-20 border border-gray-300 rounded overflow-hidden bg-white">
                                         <img src="{{ asset('storage/' . $image->path) }}" class="w-full h-full object-contain p-1">
                                     </div>
 
@@ -868,7 +868,7 @@
                     <div class="border border-gray-300 rounded p-4 bg-white">
                         <label class="block text-sm font-medium text-gray-700 mb-3">Imagen Principal</label>
                         <div class="flex items-start gap-4">
-                            <div class="flex-shrink-0">
+                            <div class="shrink-0">
                                 <div class="h-32 w-32 border border-gray-300 bg-white p-1">
                                     @if($product->imagen)
                                         <img src="{{ asset('storage/' . $product->imagen) }}"
@@ -915,7 +915,7 @@
                                 <input type="file" wire:model="imagen_ml" accept="image/*"
                                        class="block w-full text-xs text-gray-700 file:mr-2 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-xs file:bg-white hover:file:bg-gray-50">
                                 @if($product->imagen_ml)
-                                    <p class="mt-1 text-[10px] text-gray-500 font-mono">{{ basename($product->imagen_ml) }}</p>
+                                    <p class="mt-1 text-[11px] text-gray-500 font-mono">{{ basename($product->imagen_ml) }}</p>
                                 @endif
                             </div>
 
@@ -936,7 +936,7 @@
                                 <input type="file" wire:model="foto_modelo" accept="image/*"
                                        class="block w-full text-xs text-gray-700 file:mr-2 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-xs file:bg-white hover:file:bg-gray-50">
                                 @if($product->foto_modelo)
-                                    <p class="mt-1 text-[10px] text-gray-500 font-mono">{{ basename($product->foto_modelo) }}</p>
+                                    <p class="mt-1 text-[11px] text-gray-500 font-mono">{{ basename($product->foto_modelo) }}</p>
                                 @endif
                             </div>
 
@@ -957,7 +957,7 @@
                                 <input type="file" wire:model="foto_modelo_detalle" accept="image/*"
                                        class="block w-full text-xs text-gray-700 file:mr-2 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-xs file:bg-white hover:file:bg-gray-50">
                                 @if($product->foto_modelo_detalle)
-                                    <p class="mt-1 text-[10px] text-gray-500 font-mono">{{ basename($product->foto_modelo_detalle) }}</p>
+                                    <p class="mt-1 text-[11px] text-gray-500 font-mono">{{ basename($product->foto_modelo_detalle) }}</p>
                                 @endif
                             </div>
 
@@ -978,7 +978,7 @@
                                 <input type="file" wire:model="foto_medidas" accept="image/*"
                                        class="block w-full text-xs text-gray-700 file:mr-2 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-xs file:bg-white hover:file:bg-gray-50">
                                 @if($product->foto_medidas)
-                                    <p class="mt-1 text-[10px] text-gray-500 font-mono">{{ basename($product->foto_medidas) }}</p>
+                                    <p class="mt-1 text-[11px] text-gray-500 font-mono">{{ basename($product->foto_medidas) }}</p>
                                 @endif
                             </div>
 
@@ -999,7 +999,7 @@
                                 <input type="file" wire:model="foto_estampa" accept="image/*"
                                        class="block w-full text-xs text-gray-700 file:mr-2 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-xs file:bg-white hover:file:bg-gray-50">
                                 @if($product->foto_estampa)
-                                    <p class="mt-1 text-[10px] text-gray-500 font-mono">{{ basename($product->foto_estampa) }}</p>
+                                    <p class="mt-1 text-[11px] text-gray-500 font-mono">{{ basename($product->foto_estampa) }}</p>
                                 @endif
                             </div>
                         </div>
@@ -1023,7 +1023,7 @@
                                 <input type="file" wire:model="plano" accept="image/*,.pdf"
                                        class="block w-full text-xs text-gray-700 file:mr-2 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-xs file:bg-white hover:file:bg-gray-50">
                                 @if($product->plano)
-                                    <p class="mt-1 text-[10px] text-gray-500 font-mono">{{ basename($product->plano) }}</p>
+                                    <p class="mt-1 text-[11px] text-gray-500 font-mono">{{ basename($product->plano) }}</p>
                                 @endif
                             </div>
 
@@ -1033,7 +1033,7 @@
                                 <input type="file" wire:model="manual" accept="image/*,.pdf"
                                        class="block w-full text-xs text-gray-700 file:mr-2 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-xs file:bg-white hover:file:bg-gray-50">
                                 @if($product->manual)
-                                    <p class="mt-1 text-[10px] text-gray-500 font-mono">{{ basename($product->manual) }}</p>
+                                    <p class="mt-1 text-[11px] text-gray-500 font-mono">{{ basename($product->manual) }}</p>
                                 @endif
                             </div>
                         </div>

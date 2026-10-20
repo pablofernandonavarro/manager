@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Crear Producto</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Crear Producto</h1>
             <p class="mt-2 text-sm text-gray-700">Agrega un nuevo producto al catálogo completo</p>
         </div>
         <div class="mt-4 sm:mt-0">
@@ -297,13 +297,13 @@
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+                            <thead class="border-b border-gray-200">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">#</th>
                                     @foreach($variantAttributes as $attrType)
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $attrType->nombre }}</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">{{ $attrType->nombre }}</th>
                                     @endforeach
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Stock</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">

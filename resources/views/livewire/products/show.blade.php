@@ -9,7 +9,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
                 </a>
-                <h1 class="text-3xl font-bold text-gray-900">{{ $product->nombre }}</h1>
+                <h1 class="text-2xl font-semibold tracking-tight text-gray-900">{{ $product->nombre }}</h1>
 
                 @if($product->isConfigurable())
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 ring-1 ring-blue-600/20">
@@ -176,15 +176,15 @@
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Variantes ({{ $product->variants->count() }})</h3>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+                            <thead class="border-b border-gray-200">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Imagen</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Código</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Color</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Talle</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stock</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Precio</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Imagen</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Código</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Color</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Talle</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Stock</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Precio</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">

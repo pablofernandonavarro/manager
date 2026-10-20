@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="theme-color" content="#f3f4f6">
+    <meta name="color-scheme" content="light">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>{{ config('app.name', 'Sistema Manager') }}</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -11,6 +16,7 @@
     <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body class="bg-gray-100 antialiased">
+    <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[10000] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900">Saltar al contenido</a>
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar para móvil (overlay) -->
         <div x-show="sidebarOpen"
@@ -21,19 +27,22 @@
              x-transition:leave="transition-opacity ease-linear duration-300"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-40 bg-gray-900 bg-opacity-75 lg:hidden"
+             aria-hidden="true" class="fixed inset-0 z-40 bg-gray-900/75 lg:hidden"
              style="display: none;">
         </div>
 
         <!-- Sidebar -->
         <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-               class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 overflow-y-auto">
+               class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-100 text-gray-900 border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 overflow-y-auto">
 
             <!-- Logo / Nombre del sistema -->
-            <div class="flex items-center justify-between h-16 px-6 bg-gray-800">
-                <h1 class="text-xl font-bold">{{ config('app.name', 'Manager') }}</h1>
-                <button @click="sidebarOpen = false" class="lg:hidden text-gray-400 hover:text-white">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center justify-between h-16 px-6">
+                <div class="flex items-center gap-2.5">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600 text-sm font-semibold text-white" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr(config('app.name', 'Manager'), 0, 1)) }}</span>
+                    <span class="text-base font-semibold tracking-tight">{{ config('app.name', 'Manager') }}</span>
+                </div>
+                <button type="button" aria-label="Cerrar menú" @click="sidebarOpen = false" class="lg:hidden text-gray-500 hover:text-gray-900">
+                    <svg aria-hidden="true" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
@@ -42,8 +51,8 @@
             <!-- Navegación -->
             <nav class="mt-6 px-4 space-y-2 pb-6">
                 <a href="/dashboard"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('dashboard') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('dashboard') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                     </svg>
                     Dashboard
@@ -52,33 +61,33 @@
                 <!-- Productos con submenú -->
                 @php $productosOpen = request()->is('productos*'); @endphp
                 <div x-data="{ productosOpen: @js($productosOpen) }">
-                    <button @click="productosOpen = !productosOpen"
-                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors {{ $productosOpen ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <button @click="productosOpen = !productosOpen" :aria-expanded="productosOpen"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors {{ $productosOpen ? 'bg-gray-200/60 text-gray-900' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
                         <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                             </svg>
                             <span>Productos</span>
                         </div>
-                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': productosOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg aria-hidden="true" class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': productosOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     <div x-show="productosOpen" @if(!$productosOpen) style="display:none" @endif class="mt-1 ml-4 space-y-1">
-                        <a href="/productos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos') || request()->is('productos/crear') || request()->is('productos/*/editar') || (request()->is('productos/*') && !request()->is('productos/precios') && !request()->is('productos/stock')) ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/productos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos') || request()->is('productos/crear') || request()->is('productos/*/editar') || (request()->is('productos/*') && !request()->is('productos/precios') && !request()->is('productos/stock')) ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                             </svg>
                             Catálogo
                         </a>
-                        <a href="/productos/precios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos/precios') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/productos/precios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos/precios') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                             </svg>
                             Ver listas de precio
                         </a>
-                        <a href="/productos/stock" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos/stock') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/productos/stock" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('productos/stock') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                             </svg>
                             Stock
@@ -87,8 +96,8 @@
                 </div>
 
                 <a href="/ventas"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('ventas*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('ventas*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                     </svg>
                     Ventas
@@ -96,8 +105,8 @@
 
                 @can('facturacion.ver')
                 <a href="/facturacion/comprobantes"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('facturacion/comprobantes*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('facturacion/comprobantes*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
                     </svg>
                     Comprobantes
@@ -106,8 +115,8 @@
 
                 @can('facturacion.configurar')
                 <a href="/facturacion/configuracion"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('facturacion/configuracion*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('facturacion/configuracion*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                     Facturación AFIP
@@ -116,8 +125,8 @@
 
                 @can('reportes.ver')
                 <a href="/reportes/ventas"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('reportes*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('reportes*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                     </svg>
                     Reportes
@@ -126,8 +135,8 @@
 
                 @can('cajas.ver')
                 <a href="/cajas/cierres"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('cajas*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('cajas*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
                     Cierres de caja
@@ -137,30 +146,30 @@
                 {{-- Remitos con dropdown --}}
                 @php $remitosOpen = request()->is('sucursales/remitos*', 'remitos/configuracion*'); @endphp
                 <div x-data="{ remitosOpen: @js($remitosOpen) }">
-                    <button @click="remitosOpen = !remitosOpen"
-                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors {{ $remitosOpen ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <button @click="remitosOpen = !remitosOpen" :aria-expanded="remitosOpen"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors {{ $remitosOpen ? 'bg-gray-200/60 text-gray-900' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
                         <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                             </svg>
                             <span>Remitos</span>
                         </div>
-                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': remitosOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg aria-hidden="true" class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': remitosOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     <div x-show="remitosOpen" @if(!$remitosOpen) style="display:none" @endif class="mt-1 ml-4 space-y-1">
                         @can('remitos.ver')
-                        <a href="/sucursales/remitos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/remitos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/sucursales/remitos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/remitos*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                             </svg>
                             Ver remitos
                         </a>
                         @endcan
                         @can('remitos.configurar')
-                        <a href="{{ route('remitos.configuracion') }}" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('remitos/configuracion*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="{{ route('remitos.configuracion') }}" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('remitos/configuracion*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
@@ -172,8 +181,8 @@
 
                 @can('stock.ajustar')
                 <a href="/sucursales/ajuste-stock"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('sucursales/ajuste-stock*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('sucursales/ajuste-stock*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
                     Ajuste de stock
@@ -183,8 +192,8 @@
 
                 @can('clientes.gestionar')
                 <a href="/clientes"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('clientes*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('clientes*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
                     Clientes
@@ -193,8 +202,8 @@
 
                 @can('promociones.gestionar')
                 <a href="/promociones-bancarias"
-                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('promociones-bancarias*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="flex items-center px-4 py-3 rounded-lg transition-colors {{ request()->is('promociones-bancarias*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                    <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                     </svg>
                     Promociones bancarias
@@ -212,16 +221,16 @@
                         || request()->is('puntos-de-venta*');
                 @endphp
                 <div x-data="{ configOpen: @js($configOpen) }">
-                    <button @click="configOpen = !configOpen"
-                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors {{ $configOpen ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                    <button @click="configOpen = !configOpen" :aria-expanded="configOpen"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors {{ $configOpen ? 'bg-gray-200/60 text-gray-900' : 'text-gray-600 hover:bg-gray-200/60 hover:text-gray-900' }}">
                         <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg aria-hidden="true" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
                             <span>Configuración</span>
                         </div>
-                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': configOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg aria-hidden="true" class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': configOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
@@ -231,33 +240,33 @@
                         <!-- Usuarios con submenú -->
                         @php $usuariosOpen = request()->is('usuarios*') || request()->is('roles*') || request()->is('permisos*'); @endphp
                         <div x-data="{ usuariosOpen: @js($usuariosOpen) }">
-                            <button @click="usuariosOpen = !usuariosOpen"
-                                    class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors {{ $usuariosOpen ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                            <button @click="usuariosOpen = !usuariosOpen" :aria-expanded="usuariosOpen"
+                                    class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors {{ $usuariosOpen ? 'bg-gray-200/60 text-gray-900' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
                                 <div class="flex items-center">
-                                    <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                                     </svg>
                                     <span class="text-sm">Usuarios</span>
                                 </div>
-                                <svg class="w-3 h-3 transition-transform duration-200" :class="{ 'rotate-180': usuariosOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg aria-hidden="true" class="w-3 h-3 transition-transform duration-200" :class="{ 'rotate-180': usuariosOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
                             <div x-show="usuariosOpen" @if(!$usuariosOpen) style="display:none" @endif class="mt-1 ml-4 space-y-1">
-                                <a href="/usuarios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('usuarios') || request()->is('usuarios/crear') || request()->is('usuarios/*/editar') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <a href="/usuarios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('usuarios') || request()->is('usuarios/crear') || request()->is('usuarios/*/editar') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                                    <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                                     </svg>
                                     Gestión de Usuarios
                                 </a>
-                                <a href="/roles" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('roles*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <a href="/roles" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('roles*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                                    <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
                                     </svg>
                                     Roles
                                 </a>
-                                <a href="/permisos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('permisos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <a href="/permisos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('permisos*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                                    <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/>
                                     </svg>
                                     Permisos
@@ -268,77 +277,77 @@
                         <!-- Config. Productos con submenú -->
                         @php $configProdOpen = request()->is('configuracion/productos*') || request()->is('configuracion/atributos*'); @endphp
                         <div x-data="{ configProdOpen: @js($configProdOpen) }">
-                            <button @click="configProdOpen = !configProdOpen"
-                                    class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors {{ $configProdOpen ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                            <button @click="configProdOpen = !configProdOpen" :aria-expanded="configProdOpen"
+                                    class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors {{ $configProdOpen ? 'bg-gray-200/60 text-gray-900' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
                                 <div class="flex items-center">
-                                    <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                     </svg>
                                     <span class="text-sm">Config. Productos</span>
                                 </div>
-                                <svg class="w-3 h-3 transition-transform duration-200" :class="{ 'rotate-180': configProdOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg aria-hidden="true" class="w-3 h-3 transition-transform duration-200" :class="{ 'rotate-180': configProdOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
                             <div x-show="configProdOpen" @if(!$configProdOpen) style="display:none" @endif class="mt-1 ml-4 space-y-1">
-                                <a href="/configuracion/productos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/productos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <a href="/configuracion/productos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/productos*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                                    <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
                                     </svg>
                                     Ajustes
                                 </a>
-                                <a href="/configuracion/atributos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/atributos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <a href="/configuracion/atributos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/atributos*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                                    <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                                     </svg>
                                     Atributos
                                 </a>
                             </div>
                         </div>
-                        <a href="/configuracion/marcas" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/marcas*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/configuracion/marcas" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/marcas*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                             </svg>
                             Marcas
                         </a>
-                        <a href="/configuracion/lineas" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/lineas*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/configuracion/lineas" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/lineas*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                             </svg>
                             Líneas
                         </a>
-                        <a href="/configuracion/temporadas" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/temporadas*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/configuracion/temporadas" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/temporadas*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                             </svg>
                             Temporadas
                         </a>
-                        <a href="/configuracion/grupos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/grupos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/configuracion/grupos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/grupos*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                             </svg>
                             Grupos
                         </a>
-                        <a href="/configuracion/subgrupos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/subgrupos*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/configuracion/subgrupos" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/subgrupos*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                             </svg>
                             Subgrupos
                         </a>
-                        <a href="/configuracion/targets" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/targets*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/configuracion/targets" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/targets*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
                             Targets
                         </a>
-                        <a href="/listas-precios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('listas-precios*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/listas-precios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('listas-precios*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                             </svg>
                             Listas de precios
                         </a>
-                        <a href="/configuracion/procedencias" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/procedencias*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/configuracion/procedencias" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('configuracion/procedencias*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             Procedencias
@@ -346,47 +355,47 @@
                         <!-- Sucursales con submenú -->
                         @php $sucursalesOpen = request()->is('sucursales*') && ! request()->is('sucursales/remitos*', 'sucursales/ajuste-stock*'); @endphp
                         <div x-data="{ sucursalesOpen: @js($sucursalesOpen) }">
-                            <button @click="sucursalesOpen = !sucursalesOpen"
-                                    class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors {{ $sucursalesOpen ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                            <button @click="sucursalesOpen = !sucursalesOpen" :aria-expanded="sucursalesOpen"
+                                    class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors {{ $sucursalesOpen ? 'bg-gray-200/60 text-gray-900' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
                                 <div class="flex items-center">
-                                    <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                     </svg>
                                     <span class="text-sm">Sucursales</span>
                                 </div>
-                                <svg class="w-3 h-3 transition-transform duration-200" :class="{ 'rotate-180': sucursalesOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg aria-hidden="true" class="w-3 h-3 transition-transform duration-200" :class="{ 'rotate-180': sucursalesOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
                             <div x-show="sucursalesOpen" @if(!$sucursalesOpen) style="display:none" @endif class="mt-1 ml-4 space-y-1">
-                                <a href="/sucursales" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales') || request()->is('sucursales/crear') || request()->is('sucursales/*/editar') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <a href="/sucursales" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales') || request()->is('sucursales/crear') || request()->is('sucursales/*/editar') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                                    <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
                                     Datos generales
                                 </a>
-                                <a href="/sucursales/listas-precios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/listas-precios*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <a href="/sucursales/listas-precios" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/listas-precios*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                                    <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     Listas de precios
                                 </a>
-                                <a href="/sucursales/stock" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/stock*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <a href="/sucursales/stock" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('sucursales/stock*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                                    <svg aria-hidden="true" class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                     </svg>
                                     Stock
                                 </a>
                             </div>
                         </div>
-                        <a href="/puntos-de-venta" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('puntos-de-venta*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/puntos-de-venta" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('puntos-de-venta*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                             </svg>
                             Puntos de venta
                         </a>
-                        <a href="/auditoria-sincronizacion" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('auditoria-sincronizacion*') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/auditoria-sincronizacion" class="flex items-center px-4 py-2 rounded-lg transition-colors text-sm {{ request()->is('auditoria-sincronizacion*') ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-200/60 hover:text-gray-900' }}">
+                            <svg aria-hidden="true" class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             Auditoría de sincronización
@@ -399,10 +408,10 @@
         <!-- Contenido principal -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header -->
-            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10">
+            <header class="bg-gray-100 border-b border-gray-200 h-16 flex items-center justify-between px-6 z-10">
                 <!-- Botón menú móvil -->
-                <button @click="sidebarOpen = true" class="lg:hidden text-gray-600 hover:text-gray-900">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="button" aria-label="Abrir menú" @click="sidebarOpen = true" class="lg:hidden text-gray-600 hover:text-gray-900">
+                    <svg aria-hidden="true" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
@@ -412,7 +421,7 @@
                     <div class="text-right">
                         <p class="text-sm font-medium text-gray-900">{{ auth()->user()->name }}</p>
                         @if(auth()->user()->roles->first())
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
                                 {{ auth()->user()->roles->first()->name }}
                             </span>
                         @endif
@@ -421,8 +430,8 @@
                     <!-- Botón logout -->
                     <form method="POST" action="/logout">
                         @csrf
-                        <button type="submit" class="flex items-center px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="submit" aria-label="Cerrar sesión" class="flex items-center px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                             </svg>
                         </button>
@@ -431,7 +440,7 @@
             </header>
 
             <!-- Contenido de la página -->
-            <main class="flex-1 overflow-y-auto p-6 bg-gray-100">
+            <main id="contenido" class="flex-1 overflow-y-auto p-6 bg-gray-100">
                 {{ $slot ?? '' }}
                 @yield('content')
             </main>
@@ -450,8 +459,8 @@
          :style="show ? 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center' : 'display:none'">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full mx-4" style="max-width:32rem" @click.stop>
             <div class="flex items-center gap-3 mb-4">
-                <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg aria-hidden="true" class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>

@@ -1,6 +1,6 @@
 {{-- Foto de perfil: se guarda comprimida y las cajas la muestran en la sesión del vendedor. --}}
 <div>
-    <p class="block text-sm font-medium text-gray-700 mb-2">Foto de perfil <span class="text-xs text-gray-400">(opcional)</span></p>
+    <p class="block text-sm font-medium text-gray-700 mb-2">Foto de perfil <span class="text-xs text-gray-500">(opcional)</span></p>
     <div class="flex items-center gap-4">
         <div class="relative w-20 h-20 shrink-0 rounded-full overflow-hidden bg-gray-100 ring-1 ring-gray-200 flex items-center justify-center">
             @if($foto && str_starts_with((string) $foto->getMimeType(), 'image/'))
@@ -8,7 +8,7 @@
             @elseif($fotoActual)
                 <img src="{{ $fotoActual }}" alt="{{ $name }}" class="w-full h-full object-cover">
             @else
-                <svg class="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                <svg class="w-10 h-10 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 001 1h14a1 1 0 001-1v-1c0-2.76-3.58-5-8-5z"/>
                 </svg>
             @endif

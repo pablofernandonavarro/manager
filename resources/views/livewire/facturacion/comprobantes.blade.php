@@ -7,7 +7,7 @@
 <div class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Comprobantes electrónicos</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Comprobantes electrónicos</h1>
             <p class="mt-2 text-sm text-gray-700">Facturas y notas de crédito de las cajas con su CAE de AFIP</p>
         </div>
         <div class="flex gap-2 text-sm">
@@ -58,14 +58,14 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comprobante</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Caja / origen</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receptor</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Comprobante</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Fecha</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Caja / origen</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Receptor</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Total</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Estado</th>
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
@@ -112,7 +112,7 @@
                                     <div class="mt-1 max-w-xs text-xs text-red-700">{{ $c->error }}</div>
                                 @endif
                                 @if($c->intentos > 0 && ! $c->estaAutorizado())
-                                    <div class="text-xs text-gray-400">{{ $c->intentos }} intento(s)</div>
+                                    <div class="text-xs text-gray-500">{{ $c->intentos }} intento(s)</div>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-right">

@@ -8,7 +8,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Reportes de ventas</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Reportes de ventas</h1>
             <p class="mt-2 text-sm text-gray-700">Facturación, medios de pago, cajeros y conciliación de tarjetas</p>
         </div>
         <a href="{{ route('reportes.ventas.exportar', array_filter(['desde' => $filtros['desde'], 'hasta' => $filtros['hasta'], 'sucursal' => $sucursal, 'caja' => $caja, 'cajero' => $cajero ?: null])) }}"
@@ -93,7 +93,7 @@
                         <td class="py-2 text-right font-medium text-gray-900">{{ $pesos($m['importe']) }}</td>
                     </tr>
                 @empty
-                    <tr><td class="py-4 text-center text-gray-400">Sin ventas en el período</td></tr>
+                    <tr><td class="py-4 text-center text-gray-500">Sin ventas en el período</td></tr>
                 @endforelse
             </table>
         </div>
@@ -109,10 +109,10 @@
                             <div class="bg-blue-500 h-4" style="width: {{ round($d['total'] * 100 / $maxDia) }}%"></div>
                         </div>
                         <span class="w-28 text-right text-gray-900">{{ $pesos($d['total']) }}</span>
-                        <span class="w-10 text-right text-gray-400">{{ $d['cantidad'] }}</span>
+                        <span class="w-10 text-right text-gray-500">{{ $d['cantidad'] }}</span>
                     </div>
                 @empty
-                    <p class="text-center text-gray-400 text-sm py-4">Sin ventas en el período</p>
+                    <p class="text-center text-gray-500 text-sm py-4">Sin ventas en el período</p>
                 @endforelse
             </div>
         </div>
@@ -130,11 +130,11 @@
                         <td class="py-2 text-right text-gray-600">{{ $c['cantidad'] }}</td>
                         <td class="py-2 text-right font-medium text-gray-900">{{ $pesos($c['total']) }}</td>
                         <td class="py-2 text-right text-gray-600">{{ $pesos($c['ticket_promedio']) }}</td>
-                        <td class="py-2 text-right {{ $c['descuentos_manuales'] > 0 ? 'text-amber-600' : 'text-gray-400' }}">{{ $pesos($c['descuentos_manuales']) }}</td>
-                        <td class="py-2 text-right {{ $c['devoluciones'] > 0 ? 'text-red-600' : 'text-gray-400' }}">{{ $pesos($c['devoluciones']) }}</td>
+                        <td class="py-2 text-right {{ $c['descuentos_manuales'] > 0 ? 'text-amber-600' : 'text-gray-500' }}">{{ $pesos($c['descuentos_manuales']) }}</td>
+                        <td class="py-2 text-right {{ $c['devoluciones'] > 0 ? 'text-red-600' : 'text-gray-500' }}">{{ $pesos($c['devoluciones']) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="py-4 text-center text-gray-400">Sin ventas en el período</td></tr>
+                    <tr><td colspan="6" class="py-4 text-center text-gray-500">Sin ventas en el período</td></tr>
                 @endforelse
             </table>
         </div>
@@ -150,7 +150,7 @@
                         <td class="py-2 text-right font-medium text-gray-900">{{ $pesos($c['total']) }}</td>
                     </tr>
                 @empty
-                    <tr><td class="py-4 text-center text-gray-400">Sin ventas en el período</td></tr>
+                    <tr><td class="py-4 text-center text-gray-500">Sin ventas en el período</td></tr>
                 @endforelse
             </table>
         </div>
@@ -172,7 +172,7 @@
                         <td class="py-2 text-right font-medium text-gray-900">{{ $pesos($t['importe']) }}</td>
                     </tr>
                 @empty
-                    <tr><td class="py-4 text-center text-gray-400">Sin cobros con tarjeta o QR</td></tr>
+                    <tr><td class="py-4 text-center text-gray-500">Sin cobros con tarjeta o QR</td></tr>
                 @endforelse
             </table>
         </div>
@@ -183,12 +183,12 @@
             <table class="w-full text-sm">
                 @forelse($promociones as $p)
                     <tr class="border-b border-gray-100">
-                        <td class="py-2 text-gray-700">{{ $p['promocion'] }} <span class="text-gray-400">×{{ $p['usos'] }}</span></td>
+                        <td class="py-2 text-gray-700">{{ $p['promocion'] }} <span class="text-gray-500">×{{ $p['usos'] }}</span></td>
                         <td class="py-2 text-right text-amber-600">−{{ $pesos($p['descuento']) }}</td>
                         <td class="py-2 text-right text-gray-900">{{ $pesos($p['cobrado']) }}</td>
                     </tr>
                 @empty
-                    <tr><td class="py-4 text-center text-gray-400">No se usaron promociones</td></tr>
+                    <tr><td class="py-4 text-center text-gray-500">No se usaron promociones</td></tr>
                 @endforelse
             </table>
         </div>

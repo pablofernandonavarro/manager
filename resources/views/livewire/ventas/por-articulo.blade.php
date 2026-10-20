@@ -5,7 +5,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Ventas por Artículo</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Ventas por Artículo</h1>
             <p class="mt-2 text-sm text-gray-700">Qué se vendió, cuánto y en qué sucursal</p>
         </div>
     </div>
@@ -68,15 +68,15 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artículo</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Facturado</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ventas</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sucursales</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última venta</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Código</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Artículo</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Unidades</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Facturado</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Ventas</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Sucursales</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Última venta</th>
                         <th class="px-6 py-3"></th>
                     </tr>
                 </thead>
@@ -105,7 +105,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                            <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-500 italic">
                                 No hay ventas registradas con esos filtros
                             </td>
                         </tr>
@@ -131,7 +131,7 @@
                             {{ $detalleProductoNombre }}
                         </p>
                     </div>
-                    <button wire:click="cerrarDetalle" class="text-gray-400 hover:text-gray-600">
+                    <button wire:click="cerrarDetalle" class="text-gray-500 hover:text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -140,13 +140,13 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50 sticky top-0">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Venta</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sucursal</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Caja</th>
-                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cant.</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Fecha</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Venta</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Sucursal</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Caja</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Cant.</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Precio</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
@@ -172,7 +172,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                                    <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500 italic">
                                         Sin ventas para este artículo
                                     </td>
                                 </tr>

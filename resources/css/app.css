@@ -2,3 +2,91 @@
 @plugin '@tailwindcss/forms' {
     strategy: 'class';
 }
+
+/*
+ * Capa de diseño del Manager. Todas las vistas usan las utilidades de Tailwind
+ * (blue-*, shadow-sm, rounded-xl...), así que se refinan acá una sola vez:
+ *  - un único acento, azul petróleo, en lugar del azul de fábrica; indigo/violet/purple
+ *    apuntan a la misma escala para que no aparezcan tres azules distintos;
+ *  - superficies planas: sin sombra en reposo y radios chicos y parejos;
+ *  - tipografía con cifras tabulares reales.
+ */
+@theme {
+    --font-sans: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+
+    --color-blue-50: #f1f5f9;
+    --color-blue-100: #e1e9f1;
+    --color-blue-200: #c3d3e3;
+    --color-blue-300: #94b0cc;
+    --color-blue-400: #5f87ad;
+    --color-blue-500: #3a6890;
+    --color-blue-600: #234f7a;
+    --color-blue-700: #1c4064;
+    --color-blue-800: #173352;
+    --color-blue-900: #122a43;
+
+    --color-indigo-50: var(--color-blue-50);
+    --color-indigo-100: var(--color-blue-100);
+    --color-indigo-200: var(--color-blue-200);
+    --color-indigo-300: var(--color-blue-300);
+    --color-indigo-400: var(--color-blue-400);
+    --color-indigo-500: var(--color-blue-500);
+    --color-indigo-600: var(--color-blue-600);
+    --color-indigo-700: var(--color-blue-700);
+    --color-indigo-800: var(--color-blue-800);
+    --color-indigo-900: var(--color-blue-900);
+
+    --color-violet-50: var(--color-blue-50);
+    --color-violet-100: var(--color-blue-100);
+    --color-violet-500: var(--color-blue-500);
+    --color-violet-600: var(--color-blue-600);
+    --color-violet-700: var(--color-blue-700);
+
+    --color-purple-50: var(--color-blue-50);
+    --color-purple-100: var(--color-blue-100);
+    --color-purple-500: var(--color-blue-500);
+    --color-purple-600: var(--color-blue-600);
+    --color-purple-700: var(--color-blue-700);
+
+    --shadow-xs: none;
+    --shadow-sm: none;
+    --shadow: none;
+    --shadow-md: 0 2px 8px rgb(0 0 0 / 0.08);
+
+    --radius-md: 0.375rem;
+    --radius-lg: 0.375rem;
+    --radius-xl: 0.5rem;
+    --radius-2xl: 0.5rem;
+}
+
+@layer base {
+    body {
+        color: var(--color-gray-900);
+    }
+
+    table,
+    .tabular-nums {
+        font-variant-numeric: tabular-nums;
+    }
+
+    a,
+    button,
+    select,
+    summary {
+        touch-action: manipulation;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            transition-duration: 0.01ms !important;
+            animation-duration: 0.01ms !important;
+        }
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-blue-500);
+        outline-offset: 2px;
+    }
+}

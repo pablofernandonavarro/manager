@@ -11,7 +11,7 @@
 
         <!-- Header -->
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Editar Usuario</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Editar Usuario</h1>
             <p class="mt-1 text-sm text-gray-600">Actualiza la información del usuario {{ $user->name }}</p>
         </div>
 
@@ -40,7 +40,7 @@
                 <!-- Email -->
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-                        Correo electrónico @if($role !== 'cajero')<span class="text-red-500">*</span>@else<span class="text-xs text-gray-400">(opcional para cajeros)</span>@endif
+                        Correo electrónico @if($role !== 'cajero')<span class="text-red-500">*</span>@else<span class="text-xs text-gray-500">(opcional para cajeros)</span>@endif
                     </label>
                     <input
                         type="email"

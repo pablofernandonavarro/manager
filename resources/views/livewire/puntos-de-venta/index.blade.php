@@ -9,7 +9,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Puntos de venta</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Puntos de venta</h1>
             <p class="mt-2 text-sm text-gray-700">Gestioná los terminales POS por sucursal</p>
         </div>
     </div>
@@ -19,7 +19,7 @@
         <button type="button" @click="abierto = !abierto"
                 class="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors">
             <div class="flex items-center gap-3">
-                <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <div class="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                     <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -29,7 +29,7 @@
                     <p class="text-xs text-gray-500">App de escritorio · alta nueva o reinstalación de una caja rota</p>
                 </div>
             </div>
-            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': abierto }"
+            <svg class="w-4 h-4 text-gray-500 transition-transform" :class="{ 'rotate-180': abierto }"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
@@ -60,7 +60,7 @@
             <div class="grid md:grid-cols-3 gap-6">
                 <div>
                     <p class="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">1</span>
+                        <span class="shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">1</span>
                         Acá, en el Manager
                     </p>
                     <ul class="text-sm text-gray-700 space-y-1.5 ml-7 list-disc">
@@ -72,7 +72,7 @@
 
                 <div x-show="so === 'windows'">
                     <p class="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
+                        <span class="shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
                         Descargar la app
                     </p>
                     <ul class="text-sm text-gray-700 space-y-1.5 ml-7 list-disc">
@@ -112,7 +112,7 @@
 
                 <div x-show="so === 'mac'" x-cloak>
                     <p class="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
+                        <span class="shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
                         Descargar la app
                     </p>
                     <ul class="text-sm text-gray-700 space-y-1.5 ml-7 list-disc">
@@ -148,7 +148,7 @@
 
                 <div>
                     <p class="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">3</span>
+                        <span class="shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">3</span>
                         Abrir e instalar
                     </p>
                     <ul x-show="so === 'windows'" class="text-sm text-gray-700 space-y-1.5 ml-7 list-disc">
@@ -345,7 +345,7 @@
                            placeholder="Nombre del POS (ej: Caja 1)..."
                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('nombre') border-red-300 @enderror">
                     <button type="button" wire:click="save"
-                            class="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">
+                            class="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
                         + Agregar
                     </button>
                 </div>
@@ -364,15 +364,15 @@
     <!-- Listado -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sucursal</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instalación</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Versión</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Sucursal</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Nombre</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Instalación</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Versión</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Estado</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Activo</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">Acciones</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -382,7 +382,7 @@
                             <span class="text-sm text-gray-600">{{ $pdv->sucursal->nombre }}</span>
                         </td>
                         <td class="px-6 py-4">
-                            <span class="text-sm font-medium text-gray-900 {{ !$pdv->activo ? 'line-through text-gray-400' : '' }}">
+                            <span class="text-sm font-medium text-gray-900 {{ !$pdv->activo ? 'line-through text-gray-500' : '' }}">
                                 {{ $pdv->nombre }}
                             </span>
                         </td>
@@ -395,7 +395,7 @@
                                     <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                                     Instalada
                                 </span>
-                                <p class="mt-0.5 text-xs text-gray-400">
+                                <p class="mt-0.5 text-xs text-gray-500">
                                     {{ \Carbon\Carbon::parse($pdv->instalado_at)->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}
                                 </p>
                                 @if($pdv->codigos_pendientes > 0)
@@ -423,7 +423,7 @@
                                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                     Código sin usar
                                 </span>
-                                <p class="mt-0.5 text-xs text-gray-400">Esperando que se instale en la máquina</p>
+                                <p class="mt-0.5 text-xs text-gray-500">Esperando que se instale en la máquina</p>
                             @else
                                 <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
@@ -449,9 +449,9 @@
                                     <p class="mt-0.5 text-xs text-green-700">Al día</p>
                                 @endif
                             @else
-                                <span class="text-sm text-gray-400">Sin informar</span>
+                                <span class="text-sm text-gray-500">Sin informar</span>
                                 @if($pdv->instalado_at)
-                                    <p class="mt-0.5 text-xs text-gray-400" title="Las cajas informan su versión desde la app de escritorio 1.0.4 o el paquete clásico que la incluya">Se ve cuando la caja se actualice</p>
+                                    <p class="mt-0.5 text-xs text-gray-500" title="Las cajas informan su versión desde la app de escritorio 1.0.4 o el paquete clásico que la incluya">Se ve cuando la caja se actualice</p>
                                 @endif
                             @endif
 
@@ -487,7 +487,7 @@
                                     </p>
                                 @endif
                                 @if($s['nivel'] !== 'sin_datos' && $estado)
-                                    <p class="mt-1 text-xs text-gray-400">
+                                    <p class="mt-1 text-xs text-gray-500">
                                         {{ $estado['ventas_pendientes'] ?? 0 }} sin enviar ·
                                         {{ $estado['facturas_pendientes'] ?? 0 }} fact. pendientes
                                         @if($estado['turno_abierto'] ?? null)
@@ -496,7 +496,7 @@
                                     </p>
                                 @endif
                             @else
-                                <span class="text-xs text-gray-400">—</span>
+                                <span class="text-xs text-gray-500">—</span>
                             @endif
                         </td>
                         <td class="px-6 py-4 text-center">
@@ -577,20 +577,20 @@
                                 </button>
                                 <button type="button" wire:click="delete({{ $pdv->id }})"
                                         wire:confirm="¿Eliminar el punto de venta '{{ $pdv->nombre }}'?"
-                                        class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                        class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                     </svg>
                                 </button>
                                 @else
-                                    <span class="text-xs text-gray-400 italic">Sin permisos</span>
+                                    <span class="text-xs text-gray-500 italic">Sin permisos</span>
                                 @endif
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                        <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500 italic">
                             No hay puntos de venta creados todavía
                         </td>
                     </tr>

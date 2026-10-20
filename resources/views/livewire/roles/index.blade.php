@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Gestión de Roles</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Gestión de Roles</h1>
             <p class="mt-2 text-sm text-gray-700">Administra los roles y sus permisos en el sistema</p>
         </div>
         <div class="mt-4 sm:mt-0">
@@ -46,7 +46,7 @@
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Buscar rol</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
                     </div>
@@ -69,13 +69,13 @@
     <!-- Table -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Rol</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Usuarios</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Permisos</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Fecha Creación</th>
-                    <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Rol</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Usuarios</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Permisos</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Fecha Creación</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600">Acciones</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -83,7 +83,7 @@
                     <tr class="hover:bg-gray-50 transition-colors duration-150">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+                                <div class="shrink-0 h-10 w-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
                                     <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
                                     </svg>
@@ -108,7 +108,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             <div class="flex items-center">
-                                <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
                                 {{ $role->created_at->timezone(config('app.display_timezone'))->format('d/m/Y') }}

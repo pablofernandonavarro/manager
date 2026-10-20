@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Gestión de Permisos</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Gestión de Permisos</h1>
             <p class="mt-2 text-sm text-gray-700">Visualiza todos los permisos disponibles en el sistema</p>
         </div>
     </div>
@@ -14,7 +14,7 @@
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Buscar permiso</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
                     </div>
@@ -39,7 +39,7 @@
         <div class="bg-white overflow-hidden rounded-xl shadow-sm border border-gray-200">
             <div class="p-5">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0">
+                    <div class="shrink-0">
                         <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg">
                             <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/>
@@ -60,7 +60,7 @@
             <div class="bg-white overflow-hidden rounded-xl shadow-sm border border-gray-200">
                 <div class="p-5">
                     <div class="flex items-center">
-                        <div class="flex-shrink-0">
+                        <div class="shrink-0">
                             <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 shadow-lg">
                                 <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
@@ -82,12 +82,12 @@
     <!-- Table -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Módulo</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Permiso</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Nombre Completo</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Fecha Creación</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Módulo</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Permiso</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Nombre Completo</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600">Fecha Creación</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -105,7 +105,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
-                                <svg class="w-4 h-4 mr-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/>
                                 </svg>
                                 <span class="text-sm text-gray-600 font-mono">{{ $permission->name }}</span>
@@ -113,7 +113,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             <div class="flex items-center">
-                                <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
                                 {{ $permission->created_at->timezone(config('app.display_timezone'))->format('d/m/Y') }}

@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Nuevo remito</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Nuevo remito</h1>
             <p class="mt-2 text-sm text-gray-700">Enviá mercadería entre sucursales, Central incluida</p>
         </div>
         <a href="{{ route('sucursales.remitos') }}" class="text-sm text-gray-600 hover:text-gray-900">← Volver a remitos</a>
@@ -19,7 +19,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="hidden md:flex pb-2 text-gray-400">
+            <div class="hidden md:flex pb-2 text-gray-500">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </div>
             <div>
@@ -56,14 +56,14 @@
                             <span class="text-sm font-medium text-gray-900">{{ $producto->nombre }}</span>
                             <span class="ml-2 text-xs font-mono text-gray-500">{{ $producto->codigo_interno ?: $producto->codigo_barras }}</span>
                         </span>
-                        <span class="text-xs {{ ($disponible[$producto->id] ?? 0) > 0 ? 'text-green-700' : 'text-gray-400' }}">
+                        <span class="text-xs {{ ($disponible[$producto->id] ?? 0) > 0 ? 'text-green-700' : 'text-gray-500' }}">
                             {{ number_format($disponible[$producto->id] ?? 0) }} en origen · Agregar
                         </span>
                     </button>
                 @endforeach
             </div>
         @elseif(mb_strlen(trim($busqueda)) >= 2)
-            <p class="mt-3 text-sm text-gray-400">No se encontraron artículos.</p>
+            <p class="mt-3 text-sm text-gray-500">No se encontraron artículos.</p>
         @endif
     </div>
 
@@ -72,10 +72,10 @@
         <table class="w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artículo</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Disponible en origen</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase w-40">Cantidad</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Artículo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Código</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Disponible en origen</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 w-40">Cantidad</th>
                     <th class="px-6 py-3 w-12"></th>
                 </tr>
             </thead>
@@ -96,7 +96,7 @@
                                        class="w-24 px-2 py-1.5 border {{ $excede ? 'border-red-400' : 'border-gray-300' }} rounded text-sm text-center focus:ring-2 focus:ring-blue-500">
                             </td>
                             <td class="px-6 py-3 text-right">
-                                <button type="button" wire:click="quitar({{ $productId }})" class="text-gray-400 hover:text-red-600" title="Quitar">
+                                <button type="button" wire:click="quitar({{ $productId }})" class="text-gray-500 hover:text-red-600" title="Quitar">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
                             </td>
@@ -104,7 +104,7 @@
                     @endif
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-400">
+                        <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
                             Todavía no agregaste artículos. Buscalos arriba o escaneá el código.
                         </td>
                     </tr>
@@ -135,7 +135,7 @@
 
         @if($error)
             <div class="flex items-start gap-2 text-sm text-red-700 bg-red-50 rounded-lg px-4 py-3">
-                <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 {{ $error }}
             </div>
         @endif

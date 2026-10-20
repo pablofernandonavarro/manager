@@ -4,7 +4,7 @@
         <div class="container mx-auto px-4 py-4">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-800">Ver listas de precio</h1>
+                    <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Ver listas de precio</h1>
                     <p class="text-sm text-gray-500">Seleccioná una lista para consultar los precios de los productos</p>
                 </div>
             </div>
@@ -31,7 +31,7 @@
                             placeholder="Buscar por nombre, código interno o código de barras..."
                             class="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
                     </div>
@@ -77,7 +77,7 @@
     @if(!$lista)
         <!-- Estado vacío: ninguna lista seleccionada -->
         <div class="flex-1 flex items-center justify-center">
-            <div class="text-center text-gray-400">
+            <div class="text-center text-gray-500">
                 <svg class="w-20 h-20 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                 </svg>
@@ -91,13 +91,13 @@
             <table class="w-full text-sm border-collapse bg-white">
                 <thead class="bg-gray-100 sticky top-0 z-10 border-b-2 border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-28">Código</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">Producto</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-24">Stock</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-32">Precio Base</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-32 bg-blue-50">Precio Lista</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-28">Diferencia</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider w-24">% Margen</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 border-r border-gray-300 w-28">Código</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 border-r border-gray-300">Producto</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-24">Stock</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-32">Precio Base</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-32 bg-blue-50">Precio Lista</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 border-r border-gray-300 w-28">Diferencia</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 w-24">% Margen</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
@@ -128,7 +128,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-4 py-12 text-center">
-                                <div class="text-gray-400">
+                                <div class="text-gray-500">
                                     <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                     </svg>

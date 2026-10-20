@@ -2,13 +2,13 @@
     <!-- Header -->
     <div class="flex items-center gap-4">
         <a href="{{ route('sucursales.index') }}"
-           class="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+           class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
         </a>
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">{{ $sucursal->nombre }}</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">{{ $sucursal->nombre }}</h1>
             <p class="mt-1 text-sm text-gray-500">Editar sucursal</p>
         </div>
     </div>
@@ -111,16 +111,16 @@
                 </button>
             </div>
             @if($stockItems->isEmpty())
-                <div class="px-6 py-10 text-center text-sm text-gray-400 italic">
+                <div class="px-6 py-10 text-center text-sm text-gray-500 italic">
                     No hay stock registrado para esta sucursal todavía
                 </div>
             @else
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+                    <thead class="border-b border-gray-200">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Producto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">Código</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500">Cantidad</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">

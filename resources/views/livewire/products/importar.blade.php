@@ -7,7 +7,7 @@
 
     <div class="sm:flex sm:items-end sm:justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Importar productos</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Importar productos</h1>
             <p class="mt-2 text-sm text-gray-600 max-w-3xl">
                 Una fila por artículo. Sin <strong>modelo</strong> es un producto simple (se busca por <strong>codigo</strong>);
                 con modelo es una variante color + talle. Los productos que ya existen se actualizan. Las columnas
@@ -56,7 +56,7 @@
                         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                             <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $claseEstado }}">{{ $textoEstado }}</span>
                             <span class="font-medium text-gray-900">{{ $imp->nombre_original }}</span>
-                            <span class="text-gray-400">#{{ $imp->id }} · {{ $imp->user?->name }} · {{ $imp->created_at->timezone(config('app.display_timezone'))->format('d/m H:i') }}</span>
+                            <span class="text-gray-500">#{{ $imp->id }} · {{ $imp->user?->name }} · {{ $imp->created_at->timezone(config('app.display_timezone'))->format('d/m H:i') }}</span>
                             <span class="ml-auto text-sm font-semibold tabular-nums text-gray-700">{{ $porcentaje }}%</span>
                         </div>
 
@@ -71,10 +71,10 @@
                             <span>Exitosas: <strong class="text-green-700">{{ number_format($imp->filas_exitosas, 0, ',', '.') }}</strong></span>
                             <span>Con error: <strong class="{{ $imp->filas_con_error ? 'text-red-700' : 'text-gray-900' }}">{{ number_format($imp->filas_con_error, 0, ',', '.') }}</strong></span>
                             @if($imp->filas_exitosas)
-                                <span class="text-gray-400">{{ $imp->creados }} creados · {{ $imp->actualizados }} actualizados · {{ $imp->modelos_nuevos }} modelos nuevos · {{ $imp->cambios_stock }} cambios de stock</span>
+                                <span class="text-gray-500">{{ $imp->creados }} creados · {{ $imp->actualizados }} actualizados · {{ $imp->modelos_nuevos }} modelos nuevos · {{ $imp->cambios_stock }} cambios de stock</span>
                             @endif
                             @if($imp->finalizado_at && $imp->iniciado_at)
-                                <span class="text-gray-400">{{ max(1, (int) ceil($imp->iniciado_at->diffInSeconds($imp->finalizado_at) / 60)) }} min</span>
+                                <span class="text-gray-500">{{ max(1, (int) ceil($imp->iniciado_at->diffInSeconds($imp->finalizado_at) / 60)) }} min</span>
                             @endif
                         </div>
 
@@ -153,7 +153,7 @@
                 <div class="flex gap-2">
                     <button type="button" wire:click="descartar" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Descartar</button>
                     <button type="button" wire:click="aplicar" wire:loading.attr="disabled" @disabled($errores)
-                            class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="aplicar">Importar {{ number_format($totalFilas, 0, ',', '.') }} filas</span>
                         <span wire:loading wire:target="aplicar">Enviando…</span>
                     </button>
@@ -173,17 +173,17 @@
 
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-50">
+                    <thead class="border-b border-gray-200">
                         <tr>
                             @foreach(['Fila', 'Acción', 'Modelo / código', 'Nombre', 'Variante', 'Cód. barras', 'Precio', 'Stock'] as $th)
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">{{ $th }}</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">{{ $th }}</th>
                             @endforeach
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach($previa as $f)
                             <tr wire:key="fila-{{ $f['fila'] }}">
-                                <td class="px-4 py-2 text-gray-400">{{ $f['fila'] }}</td>
+                                <td class="px-4 py-2 text-gray-500">{{ $f['fila'] }}</td>
                                 <td class="px-4 py-2">
                                     <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $f['accion'] === 'crear' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800' }}">
                                         {{ $f['accion'] === 'crear' ? 'Nuevo' : 'Actualiza' }}{{ $f['tipo'] === 'variante' && ! $f['modelo_id'] ? ' · modelo nuevo' : '' }}

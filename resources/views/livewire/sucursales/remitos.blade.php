@@ -8,7 +8,7 @@
 <div class="space-y-6">
     <div class="sm:flex sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Remitos</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Remitos</h1>
             <p class="mt-2 text-sm text-gray-700">Mercadería enviada y recibida entre sucursales, Central incluida</p>
         </div>
         <div class="mt-4 sm:mt-0 flex items-center gap-3">
@@ -86,7 +86,7 @@
                         <span class="text-sm font-semibold text-gray-500">#{{ str_pad($remito->id, 6, '0', STR_PAD_LEFT) }}</span>
                         <span class="text-sm text-gray-700">
                             <strong>{{ $remito->sucursalOrigen->nombre }}</strong>
-                            <span class="text-gray-400 mx-1">→</span>
+                            <span class="text-gray-500 mx-1">→</span>
                             <strong>{{ $remito->sucursalDestino->nombre }}</strong>
                         </span>
                         <span class="text-xs text-gray-500">
@@ -113,7 +113,7 @@
                         @if($remito->estado->value === 'remitido')
                             @if($puedeRecibir)
                                 <button type="button" wire:click="abrirModalRecepcion({{ $remito->id }})"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                     Confirmar recepción
                                 </button>
@@ -154,9 +154,9 @@
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                            <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                            <th class="px-6 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                            <th class="px-6 py-2 text-left text-xs font-medium text-gray-500">Producto</th>
+                            <th class="px-6 py-2 text-left text-xs font-medium text-gray-500">Código</th>
+                            <th class="px-6 py-2 text-center text-xs font-medium text-gray-500">Cantidad</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -208,7 +208,7 @@
                         <h2 class="text-lg font-semibold text-gray-900">Recepción de remito #{{ str_pad($remitoModal->id, 6, '0', STR_PAD_LEFT) }}</h2>
                         <p class="text-sm text-gray-600 mt-1">{{ $remitoModal->sucursalOrigen->nombre }} → {{ $remitoModal->sucursalDestino->nombre }}</p>
                     </div>
-                    <button type="button" wire:click="cerrarModal" class="text-gray-400 hover:text-gray-600">
+                    <button type="button" wire:click="cerrarModal" class="text-gray-500 hover:text-gray-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -223,9 +223,9 @@
                         <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
                             <thead class="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Producto</th>
-                                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-600 uppercase">Enviado</th>
-                                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-600 uppercase">Recibido</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-600">Producto</th>
+                                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-600">Enviado</th>
+                                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-600">Recibido</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
@@ -287,7 +287,7 @@
                     </button>
                     <button type="button" wire:click="confirmarRecepcionParcial"
                             wire:loading.attr="disabled"
-                            class="px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50">
+                            class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50">
                         <svg class="w-4 h-4 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
